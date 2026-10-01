@@ -6,9 +6,9 @@ It tracks how extensions rank for **keyword × locale** combinations over time, 
 visibility, ranking movement, locale coverage and competitive overlap for any public Chrome Web Store
 listing.
 
-This repository currently contains the **dashboard UI skeleton**: project infrastructure, the app
-shell and a data-first dashboard built entirely on mock data. There is no database, auth, billing or
-crawler wiring yet.
+The dashboard is backed by Neon Postgres and reads live ranking data. Collection is performed by a
+separate Cloudflare Worker project, [ext-probe](https://github.com/Henri-ZZ/ext-probe) — this app never
+crawls the Chrome Web Store itself.
 
 ## Tech stack
 
@@ -19,85 +19,138 @@ crawler wiring yet.
 | Styling   | Tailwind CSS v4                               |
 | UI        | shadcn/ui + Radix primitives + Lucide Icons   |
 | Charts    | Recharts via shadcn chart components          |
+| Database  | Neon Postgres (`@neondatabase/serverless`)    |
 | Package   | pnpm (only pnpm — no npm/yarn lockfiles)      |
 
 ## Getting started
 
 ```bash
 pnpm install
+cp .env.example .env.local   # then fill in DATABASE_URL
 pnpm dev
 ```
 
-The app runs on http://localhost:3000. `/` is a placeholder entry point; the dashboard lives at
-`/dashboard`.
+`/` is a placeholder entry point; the dashboard lives at `/dashboard`.
+
+### Environment variables
+
+| Variable            | Required | Purpose                                                                 |
+| ------------------- | -------- | ----------------------------------------------------------------------- |
+| `DATABASE_URL`      | yes      | Neon connection string, shared with ext-probe                                     |
+| `EXT_PROBE_URL`     | no       | ext-probe Worker base URL — used by **Track now** and by metadata resolve on add  |
+| `EXT_PROBE_TOKEN`   | no       | `MANUAL_TRIGGER_TOKEN` of the ext-probe Worker                                    |
+
+Without `EXT_PROBE_URL` / `EXT_PROBE_TOKEN` everything still works: the manual trigger reports that it
+is not configured, and a newly added extension shows a monogram fallback until ext-probe backfills
+its title and icon on the next collection. Scheduled collection keeps running on Cloudflare regardless.
 
 ### Scripts
 
 ```bash
 pnpm dev        # start the dev server
-pnpm build      # production build
+pnpm build      # production build (does not touch the database)
 pnpm start      # serve the production build
 pnpm lint       # eslint (flat config)
 pnpm typecheck  # next typegen && tsc --noEmit
 ```
 
+## Database setup
+
+Schema lives in `db/schema.sql` and is idempotent. Apply it **after** ext-probe's schema, because
+`target_latest` is a view over `ranking_runs`:
+
+1. `ext-probe/db/schema.sql` → `collection_batches`, `ranking_runs`, `ranking_results`
+2. `ext-signal/db/schema.sql` → `extensions`, `tracking_targets`, `target_latest` (view)
+
+### Ownership of tables
+
+| Table                                                      | Writer     | Reader                |
+| ---------------------------------------------------------- | ---------- | --------------------- |
+| `extensions`, `tracking_targets`                            | ext-signal | ext-probe, ext-signal |
+| `collection_batches`, `ranking_runs`, `ranking_results`     | ext-probe  | ext-signal            |
+| `extension_profiles` (titles, icons, ratings)               | ext-probe  | ext-signal            |
+
+The rule is: **whoever owns the table does the fetching.** ext-signal never writes ranking
+or metadata rows, and ext-probe never writes tracking configuration. Every Chrome Web Store
+request stays in ext-probe, so the store's bot handling always sees the same egress IP that the
+collector was validated against.
+
+When an extension is added, the Server Action asks ext-probe to resolve its metadata once
+(`POST /admin/resolve`) so the title and icon appear immediately. If the probe is unreachable the
+extension is still created — ext-probe backfills metadata on its next collection.
+
 ## Project structure
 
 ```
+db/schema.sql                  # tables + target_latest view
 src/
   app/
-    page.tsx                     # placeholder landing page
     dashboard/
-      layout.tsx                 # sidebar shell
-      page.tsx                   # Overview
-      extensions/
-        page.tsx                 # tracked extensions
-        [id]/page.tsx            # extension detail (Overview / Rankings / Keywords / Competitors / Locales)
-      keywords|competitors|discover|settings/page.tsx
+      layout.tsx               # sidebar shell, force-dynamic
+      actions.ts               # Server Actions: add/remove extension, manage targets, trigger probe
+      page.tsx                 # Overview
+      extensions/[id]/page.tsx # extension detail
   components/
-    dashboard/                   # app-level composed components
-    ui/                          # shadcn/ui primitives
-  data/
-    mock.ts                      # all mock data (single source, easy to replace)
+    dashboard/                 # composed app components
+    ui/                        # shadcn/ui primitives
+  data/extensions.ts           # all Neon reads
   lib/
-    rankings.ts                  # rank tiers + aggregation helpers
-    utils.ts                     # cn()
-  hooks/
+    db.ts                      # Neon client + value normalisation
+    session.ts                 # current-user seam
+    rankings.ts                # rank tiers, aggregation, formatting
+    cws.ts                     # Chrome Web Store URL / ID parsing
+    locales.ts                 # locale codes shared with ext-probe
+scripts/
+  apply-schema.mjs             # applies db/schema.sql to DATABASE_URL
 ```
 
-Data flows one way: `data/mock.ts` → `components/dashboard/*` → `app/*`. When Neon is connected,
-`data/mock.ts` is the module that gets replaced; no component holds its own hardcoded figures.
-
 Pages are Server Components. Client boundaries are limited to what genuinely needs interactivity:
-the sidebar, the account menu, the `Add Extension` dialog, the chart and the detail page tabs
-(panels themselves stay server-rendered and are passed down as children).
+the sidebar, dialogs, the target form, the chart, the tabs container and the Track now button.
 
-## Product concepts
+## How tracking works
 
-- **Extension** — a tracked public Chrome Web Store listing, identified by its CWS ID.
-- **Tracking target** — one `keyword × locale` pair. This is the core unit of data.
-- **Rank tier** — rankings are bucketed into Top 3 / Top 10 / Top 20 / Top 50 / NR, rendered as a
-  compact matrix on `/dashboard/extensions/[id]` → Rankings.
+1. Add an extension on `/dashboard/extensions/[id]` — either a store URL or a bare 32-character ID.
+2. Add a **keyword × locale matrix** on that page's Rankings tab. Every keyword is tracked in every
+   selected locale, producing one *tracking target* per pair.
+3. ext-probe reads `tracking_targets` on its Cron schedule, collects the Chrome Web Store SERP for each
+   distinct `(keyword, locale)`, and writes one `ranking_runs` row per target extension.
+4. The matrix shows the latest state per target.
+
+### Matrix cell states
+
+| Cell  | Meaning                                                                     |
+| ----- | --------------------------------------------------------------------------- |
+| `#12` | Ranked, collected successfully                                              |
+| `NR`  | The collection was reliable but the extension was not in the checked range   |
+| `!`   | The last collection failed — the ranking is unknown, not zero                |
+| `—`   | Not collected yet                                                           |
+
+`NR` and `!` are deliberately distinct: `NR` is a conclusion, `!` is a missing conclusion.
+
+Locale codes use the Chrome Web Store URL parameter (`en`, `zh_CN`) because that value is part of the
+join key against probe data. Do not normalise them to BCP 47 dashes.
 
 Any public listing can be tracked; there is no ownership verification and no "my extensions" concept.
 
-## Future architecture
+## Authentication
 
-**Web** — Next.js on Vercel.
+Not wired up yet. `src/lib/session.ts` is the single seam that resolves the current user and currently
+returns a hardcoded workspace owner (`henri@henriz.dev`). Everything else — Server Actions, queries,
+ownership checks — already scopes by that email, so adding Neon Auth means replacing that one function.
 
-**Database** — Neon Postgres. `src/data/mock.ts` becomes the query layer.
+## Deployment
 
-**Auth** — Neon Auth.
+Web: Next.js on Vercel. Dashboard routes are `force-dynamic`, and `pnpm build` does not require database
+access, so a build succeeds without `DATABASE_URL`; the env var must be set in the Vercel project.
 
-**Crawler** — runs independently on Cloudflare Workers. It is deliberately not part of this
-Next.js app: the web app only reads crawl results.
+Crawler: Cloudflare Workers (separate repository, ext-probe).
 
-**Cold historical storage** — Cloudflare R2 for long-term rank history (future).
+Cold historical storage: Cloudflare R2, for long-term rank history (future).
 
 ## Roadmap
 
-1. Connect Neon Postgres and replace `src/data/mock.ts` with real queries.
-2. Add Neon Auth and scope tracked extensions to a workspace.
-3. Introduce TanStack Table for the Extensions/Keywords tables (filtering, sorting, pagination).
-4. Build the crawler on Cloudflare Workers and persist rank history.
-5. Historical rank charts, competitor tracking and keyword discovery.
+1. Wire up Neon Auth and replace the user seam.
+2. Add TanStack Table for client-side sorting/filtering/pagination on the Extensions and Keywords tables.
+3. Sync extension titles and metadata (belongs in ext-probe, since it requires fetching store pages).
+4. Historical rank charts per keyword × locale, not just the aggregate.
+5. Keyword discovery and cross-extension comparison workspaces.

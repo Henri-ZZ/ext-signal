@@ -2,6 +2,7 @@ import { Fragment, type ReactNode } from "react"
 import Link from "next/link"
 
 import { AddExtensionDialog } from "@/components/dashboard/add-extension-dialog"
+import { TrackNowButton } from "@/components/dashboard/track-now-button"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -20,6 +21,8 @@ export type Crumb = {
 
 type DashboardHeaderProps = {
   title: string
+  /** Rendered to the left of the title, e.g. an extension icon. */
+  leading?: ReactNode
   description?: ReactNode
   breadcrumbs?: Crumb[]
   /** Defaults to the global `Add Extension` action. */
@@ -28,6 +31,7 @@ type DashboardHeaderProps = {
 
 export function DashboardHeader({
   title,
+  leading,
   description,
   breadcrumbs,
   actions,
@@ -62,16 +66,24 @@ export function DashboardHeader({
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="grid gap-1">
-          <h1 className="font-heading text-xl font-semibold tracking-tight">
-            {title}
-          </h1>
-          {description ? (
-            <div className="text-sm text-muted-foreground">{description}</div>
-          ) : null}
+        <div className="flex items-start gap-3">
+          {leading ? <div className="mt-0.5">{leading}</div> : null}
+          <div className="grid gap-1">
+            <h1 className="font-heading text-xl font-semibold tracking-tight">
+              {title}
+            </h1>
+            {description ? (
+              <div className="text-sm text-muted-foreground">{description}</div>
+            ) : null}
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          {actions ?? <AddExtensionDialog />}
+          {actions ?? (
+            <>
+              <TrackNowButton />
+              <AddExtensionDialog />
+            </>
+          )}
         </div>
       </div>
     </header>

@@ -3,14 +3,14 @@
 import * as React from "react"
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
 
+import { Button } from "@/components/ui/button"
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { Button } from "@/components/ui/button"
-import { visibilityHistory } from "@/data/mock"
+import type { HistoryPoint } from "@/data/extensions"
 import { cn } from "@/lib/utils"
 
 const chartConfig = {
@@ -25,18 +25,39 @@ const chartConfig = {
 } satisfies ChartConfig
 
 const rangeOptions = [
-  { value: "7", label: "7D", title: "Last 7 days" },
-  { value: "14", label: "14D", title: "Last 14 days" },
-  { value: "30", label: "30D", title: "Last 30 days" },
+  { value: 7, label: "7D", title: "Last 7 days" },
+  { value: 14, label: "14D", title: "Last 14 days" },
+  { value: 30, label: "30D", title: "Last 30 days" },
 ]
 
-export function VisibilityChart() {
+export function VisibilityChart({ data }: { data: HistoryPoint[] }) {
   const [range, setRange] = React.useState("30")
 
-  const data = React.useMemo(
-    () => visibilityHistory.slice(-Number(range)),
-    [range],
-  )
+  const points = React.useMemo(() => {
+    const days = Number(range)
+    const window = data.slice(-days)
+
+    return window.map((point) => {
+      const [, month, day] = point.day.split("-")
+      return {
+        label: `${Number(month)}/${Number(day)}`,
+        visibility: Number(point.visibility.toFixed(1)),
+        averageRank:
+          point.averageRank == null
+            ? null
+            : Number(point.averageRank.toFixed(2)),
+      }
+    })
+  }, [data, range])
+
+  if (data.length === 0) {
+    return (
+      <p className="py-16 text-center text-sm text-muted-foreground">
+        No collection history yet. Rankings appear after the first successful
+        probe run.
+      </p>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -63,11 +84,11 @@ export function VisibilityChart() {
               variant="ghost"
               size="xs"
               title={option.title}
-              aria-pressed={range === option.value}
-              onClick={() => setRange(option.value)}
+              aria-pressed={range === String(option.value)}
+              onClick={() => setRange(String(option.value))}
               className={cn(
                 "font-mono text-xs text-muted-foreground",
-                range === option.value &&
+                range === String(option.value) &&
                   "bg-background text-foreground shadow-sm hover:bg-background",
               )}
             >
@@ -78,10 +99,7 @@ export function VisibilityChart() {
       </div>
 
       <ChartContainer config={chartConfig} className="h-[260px] w-full">
-        <LineChart
-          data={data}
-          margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-        >
+        <LineChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid vertical={false} />
           <XAxis
             dataKey="label"

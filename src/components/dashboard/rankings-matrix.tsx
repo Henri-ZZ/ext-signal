@@ -1,11 +1,14 @@
-import { locales, type KeywordRanking } from "@/data/mock"
 import {
+  cellDescription,
+  cellLabel,
+  cellStyle,
   RANK_TIER_META,
   RANK_TIER_ORDER,
-  formatRank,
-  rankTier,
 } from "@/lib/rankings"
+import { localeLabel, localeName } from "@/lib/locales"
 import { cn } from "@/lib/utils"
+
+import type { RankingsMatrix as Matrix } from "@/data/extensions"
 import {
   DataTable,
   type DataTableColumn,
@@ -15,39 +18,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-
-const columns: DataTableColumn<KeywordRanking>[] = [
-  {
-    id: "keyword",
-    header: "Keyword",
-    cell: (keyword) => <span className="font-medium">{keyword.keyword}</span>,
-  },
-  ...locales.map<DataTableColumn<KeywordRanking>>((locale) => ({
-    id: locale.code,
-    header: (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="font-mono">{locale.label}</span>
-        </TooltipTrigger>
-        <TooltipContent>{locale.name}</TooltipContent>
-      </Tooltip>
-    ),
-    align: "right",
-    cell: (keyword) => {
-      const rank = keyword.ranks[locale.code]
-      return (
-        <span
-          className={cn(
-            "inline-flex h-6 min-w-10 items-center justify-center rounded-md px-1.5 font-mono text-xs tabular-nums",
-            RANK_TIER_META[rankTier(rank)].cell,
-          )}
-        >
-          {formatRank(rank)}
-        </span>
-      )
-    },
-  })),
-]
 
 function RankTierLegend() {
   return (
@@ -61,8 +31,13 @@ function RankTierLegend() {
           {RANK_TIER_META[tier].label}
         </span>
       ))}
-      <span className="ml-auto hidden sm:block">
-        NR = not ranked in the tracked window
+      <span className="flex items-center gap-1.5">
+        <span className="size-2.5 rounded-[3px] bg-amber-500/50" />
+        Failed
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="size-2.5 rounded-[3px] bg-transparent ring-1 ring-inset ring-border" />
+        Not collected
       </span>
     </div>
   )
@@ -70,14 +45,66 @@ function RankTierLegend() {
 
 /**
  * The keyword x locale matrix — the core data shape of the product.
+ * Columns are derived from the locales that are actually tracked.
  */
-export function RankingsMatrix({ keywords }: { keywords: KeywordRanking[] }) {
+export function RankingsMatrix({ matrix }: { matrix: Matrix }) {
+  if (matrix.rows.length === 0) {
+    return (
+      <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+        No targets yet. Add keywords and locales above to start tracking.
+      </p>
+    )
+  }
+
+  const columns: DataTableColumn<Matrix["rows"][number]>[] = [
+    {
+      id: "keyword",
+      header: "Keyword",
+      cell: (row) => <span className="font-medium">{row.keyword}</span>,
+    },
+    ...matrix.locales.map<DataTableColumn<Matrix["rows"][number]>>((locale) => ({
+      id: locale,
+      header: (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="font-mono">{localeLabel(locale)}</span>
+          </TooltipTrigger>
+          <TooltipContent>{localeName(locale)}</TooltipContent>
+        </Tooltip>
+      ),
+      align: "right",
+      cell: (row) => {
+        const cell = row.cells[locale]
+        if (!cell) {
+          return <span className="text-muted-foreground/30">·</span>
+        }
+
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className={cn(
+                  "inline-flex h-6 min-w-10 items-center justify-center rounded-md px-1.5 font-mono text-xs tabular-nums",
+                  cellStyle(cell),
+                  !cell.enabled && "opacity-50",
+                )}
+              >
+                {cellLabel(cell)}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{cellDescription(cell)}</TooltipContent>
+          </Tooltip>
+        )
+      },
+    })),
+  ]
+
   return (
     <>
       <DataTable
         columns={columns}
-        rows={keywords}
-        getRowKey={(keyword) => keyword.keyword}
+        rows={matrix.rows}
+        getRowKey={(row) => row.keyword}
         className="min-w-[46rem]"
       />
       <RankTierLegend />

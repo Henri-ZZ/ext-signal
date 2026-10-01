@@ -13,24 +13,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar"
-import { currentUser } from "@/data/mock"
+import type { SessionUser } from "@/lib/session"
 
-export function AccountMenu() {
+export function AccountMenu({ user }: { user: SessionUser }) {
   const { isMobile } = useSidebar()
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <SidebarMenuButton size="lg" tooltip={currentUser.name}>
+        <SidebarMenuButton size="lg" tooltip={user.name}>
           <Avatar size="sm">
-            <AvatarFallback>{currentUser.initials}</AvatarFallback>
+            <AvatarFallback>{user.initials}</AvatarFallback>
           </Avatar>
           <span className="grid flex-1 text-left leading-tight">
-            <span className="truncate text-sm font-medium">
-              {currentUser.name}
-            </span>
+            <span className="truncate text-sm font-medium">{user.name}</span>
             <span className="truncate text-xs text-muted-foreground">
-              {currentUser.email}
+              {user.email}
             </span>
           </span>
           <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
@@ -44,10 +42,8 @@ export function AccountMenu() {
         sideOffset={8}
       >
         <DropdownMenuLabel className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium text-foreground">
-            {currentUser.name}
-          </span>
-          <span className="text-xs font-normal">{currentUser.plan}</span>
+          <span className="text-sm font-medium text-foreground">{user.name}</span>
+          <span className="text-xs font-normal">{user.email}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
@@ -61,9 +57,9 @@ export function AccountMenu() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive">
+        <DropdownMenuItem variant="destructive" disabled>
           <LogOut />
-          Sign out
+          Sign out (available after auth)
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

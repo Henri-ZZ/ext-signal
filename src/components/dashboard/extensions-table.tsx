@@ -1,22 +1,22 @@
 import Link from "next/link"
-import { ArrowDownRight, ArrowUpRight } from "lucide-react"
 
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/dashboard/data-table"
-import type { TrackedExtension } from "@/data/mock"
-import { formatDelta, formatRelativeMinutes } from "@/lib/rankings"
-import { cn } from "@/lib/utils"
+import { ExtensionIcon } from "@/components/dashboard/extension-icon"
+import type { ExtensionSummary } from "@/data/extensions"
+import { formatPercent, formatRelativeTime } from "@/lib/rankings"
 
-function VisibilityCell({ extension }: { extension: TrackedExtension }) {
-  const improving = extension.visibilityChange >= 0
-  const TrendIcon = improving ? ArrowUpRight : ArrowDownRight
+function VisibilityCell({ extension }: { extension: ExtensionSummary }) {
+  if (extension.targetCount === 0) {
+    return <span className="text-xs text-muted-foreground">No targets</span>
+  }
 
   return (
     <div className="flex items-center gap-2">
       <span className="w-9 font-medium tabular-nums">
-        {extension.visibility}%
+        {formatPercent(extension.visibility)}
       </span>
       <span className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
         <span
@@ -24,35 +24,30 @@ function VisibilityCell({ extension }: { extension: TrackedExtension }) {
           style={{ width: `${extension.visibility}%` }}
         />
       </span>
-      <span
-        className={cn(
-          "flex items-center gap-0.5 text-xs tabular-nums",
-          improving
-            ? "text-emerald-600 dark:text-emerald-400"
-            : "text-muted-foreground",
-        )}
-      >
-        <TrendIcon className="size-3" />
-        {formatDelta(extension.visibilityChange)}
+      <span className="text-xs text-muted-foreground tabular-nums">
+        {extension.rankedCount}/{extension.targetCount}
       </span>
     </div>
   )
 }
 
-const columns: DataTableColumn<TrackedExtension>[] = [
+const columns: DataTableColumn<ExtensionSummary>[] = [
   {
     id: "extension",
     header: "Extension",
     cell: (extension) => (
       <Link
         href={`/dashboard/extensions/${extension.id}`}
-        className="group/extension grid gap-0.5"
+        className="group/extension flex items-center gap-2.5"
       >
-        <span className="font-medium group-hover/extension:underline">
-          {extension.name}
-        </span>
-        <span className="font-mono text-xs text-muted-foreground">
-          {extension.cwsId}
+        <ExtensionIcon iconUrl={extension.iconUrl} name={extension.name} />
+        <span className="grid gap-0.5">
+          <span className="font-medium group-hover/extension:underline">
+            {extension.name}
+          </span>
+          <span className="font-mono text-xs text-muted-foreground">
+            {extension.cwsId}
+          </span>
         </span>
       </Link>
     ),
@@ -66,7 +61,7 @@ const columns: DataTableColumn<TrackedExtension>[] = [
     id: "keywords",
     header: "Keywords",
     align: "right",
-    cell: (extension) => extension.keywordsTracked,
+    cell: (extension) => extension.keywordCount,
   },
   {
     id: "top10",
@@ -78,7 +73,7 @@ const columns: DataTableColumn<TrackedExtension>[] = [
     id: "locales",
     header: "Locales",
     align: "right",
-    cell: (extension) => extension.localesTracked,
+    cell: (extension) => extension.localeCount,
   },
   {
     id: "lastChecked",
@@ -86,7 +81,7 @@ const columns: DataTableColumn<TrackedExtension>[] = [
     align: "right",
     cell: (extension) => (
       <span className="text-muted-foreground">
-        {formatRelativeMinutes(extension.lastCheckedMinutes)}
+        {formatRelativeTime(extension.lastCollectedAt)}
       </span>
     ),
   },
@@ -95,7 +90,7 @@ const columns: DataTableColumn<TrackedExtension>[] = [
 export function ExtensionsTable({
   extensions,
 }: {
-  extensions: TrackedExtension[]
+  extensions: ExtensionSummary[]
 }) {
   return (
     <DataTable

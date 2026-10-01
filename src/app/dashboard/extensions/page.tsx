@@ -1,15 +1,21 @@
 import type { Metadata } from "next"
+import { Puzzle } from "lucide-react"
 
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
+import { EmptyState } from "@/components/dashboard/empty-state"
 import { ExtensionsTable } from "@/components/dashboard/extensions-table"
 import { Panel } from "@/components/dashboard/panel"
-import { trackedExtensions } from "@/data/mock"
+import { listExtensions } from "@/data/extensions"
+import { getCurrentUser } from "@/lib/session"
 
 export const metadata: Metadata = {
   title: "Extensions",
 }
 
-export default function ExtensionsPage() {
+export default async function ExtensionsPage() {
+  const user = await getCurrentUser()
+  const extensions = await listExtensions(user.email)
+
   return (
     <>
       <DashboardHeader
@@ -18,9 +24,17 @@ export default function ExtensionsPage() {
       />
 
       <div className="px-4 py-5 md:px-6">
-        <Panel>
-          <ExtensionsTable extensions={trackedExtensions} />
-        </Panel>
+        {extensions.length === 0 ? (
+          <EmptyState
+            icon={Puzzle}
+            title="No extensions tracked yet"
+            description="Add a public Chrome Web Store extension, then define a keyword × locale matrix to start collecting rankings."
+          />
+        ) : (
+          <Panel>
+            <ExtensionsTable extensions={extensions} />
+          </Panel>
+        )}
       </div>
     </>
   )

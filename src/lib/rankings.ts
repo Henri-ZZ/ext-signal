@@ -1,25 +1,37 @@
 /**
- * Rank domain types and formatting helpers.
+ * Rank domain types, tiers and aggregation.
  *
- * `keyword x locale` is the core unit of data in ExtSignal, so rank
- * presentation and aggregation live in one place and are shared by the
- * rankings matrix, the extension table and the detail tabs.
+ * `keyword x locale` is the core unit of data in ExtSignal. A cell can be in
+ * four states, mirroring ext-probe's collection semantics:
+ *
+ *   ranked    已排名，值就是名次
+ *   not-found 已可靠检查到某个深度但没找到（NR）
+ *   failed    最近一次采集失败，无法下结论（unknown）
+ *   pending   还没有采集过
+ *
+ * NR 与 failed 必须区分：NR 是结论，failed 是缺失的结论。
  */
 
-export type LocaleCode = "en" | "zh-CN" | "es" | "de" | "ja"
+export type RankCellState = "ranked" | "not-found" | "failed" | "pending"
 
-/** Search position per locale. `null` means not ranked / not checked yet. */
-export type RankMap = Record<LocaleCode, number | null>
-
-export type RankedKeyword = {
-  keyword: string
-  ranks: RankMap
+export type RankCell = {
+  state: RankCellState
+  /** 仅 ranked 有值。 */
+  rank: number | null
+  /** NR 时表示已可靠检查到的名次范围。 */
+  checkedWithin: number | null
+  collectedAt: string | null
+  message: string | null
 }
 
-/**
- * Buckets a raw search position into a display tier.
- * Positions beyond the tracked top-50 window are reported as `unranked` (NR).
- */
+export const PENDING_CELL: RankCell = {
+  state: "pending",
+  rank: null,
+  checkedWithin: null,
+  collectedAt: null,
+  message: null,
+}
+
 export type RankTier = "top3" | "top10" | "top20" | "top50" | "unranked"
 
 export const RANK_TIER_ORDER: RankTier[] = [
@@ -32,42 +44,34 @@ export const RANK_TIER_ORDER: RankTier[] = [
 
 type RankTierMeta = {
   label: string
-  description: string
-  /** Tailwind classes used inside a matrix cell. */
   cell: string
-  /** Tailwind classes used for the legend swatch. */
   swatch: string
 }
 
 export const RANK_TIER_META: Record<RankTier, RankTierMeta> = {
   top3: {
     label: "Top 3",
-    description: "Position 1-3",
     cell: "bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-400",
     swatch: "bg-emerald-500/60",
   },
   top10: {
     label: "Top 10",
-    description: "Position 4-10",
     cell: "bg-foreground/[0.07] font-medium text-foreground dark:bg-foreground/15",
     swatch: "bg-foreground/35",
   },
   top20: {
     label: "Top 20",
-    description: "Position 11-20",
     cell: "text-foreground/80",
     swatch: "bg-foreground/20",
   },
   top50: {
     label: "Top 50",
-    description: "Position 21-50",
     cell: "text-muted-foreground",
     swatch: "bg-foreground/10",
   },
   unranked: {
     label: "NR",
-    description: "Not ranked in the tracked window",
-    cell: "text-muted-foreground/50",
+    cell: "text-muted-foreground",
     swatch: "bg-transparent ring-1 ring-inset ring-border",
   },
 }
@@ -85,22 +89,118 @@ export function isRanked(rank: number | null | undefined): rank is number {
   return rank != null
 }
 
-export function formatRank(rank: number | null | undefined): string {
-  return rank == null ? "NR" : `#${rank}`
+/** Cell classes for the keyword x locale matrix. */
+export function cellStyle(cell: RankCell): string {
+  if (cell.state === "ranked" && cell.rank != null) {
+    return RANK_TIER_META[rankTier(cell.rank)].cell
+  }
+  if (cell.state === "not-found") {
+    return "text-muted-foreground"
+  }
+  if (cell.state === "failed") {
+    return "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+  }
+  return "text-muted-foreground/40"
 }
 
-/** Mean of the ranked positions, or `null` when nothing is ranked yet. */
-export function averageRank(ranks: (number | null | undefined)[]): number | null {
-  const ranked = ranks.filter(isRanked)
-  if (ranked.length === 0) return null
-  return ranked.reduce((total, rank) => total + rank, 0) / ranked.length
+export function cellLabel(cell: RankCell): string {
+  if (cell.state === "ranked" && cell.rank != null) return `#${cell.rank}`
+  if (cell.state === "not-found") return "NR"
+  if (cell.state === "failed") return "!"
+  return "—"
 }
+
+export function cellDescription(cell: RankCell): string {
+  if (cell.state === "ranked" && cell.rank != null) {
+    return `Position ${cell.rank} · collected ${formatRelativeTime(cell.collectedAt)}`
+  }
+  if (cell.state === "not-found") {
+    const within = cell.checkedWithin ?? 50
+    return `Not ranked within the top ${within} · collected ${formatRelativeTime(cell.collectedAt)}`
+  }
+  if (cell.state === "failed") {
+    return `Last collection failed${cell.message ? `: ${cell.message}` : ""}`
+  }
+  return "Not collected yet"
+}
+
+// ---------------------------------------------------------------------------
+// Aggregation
+// ---------------------------------------------------------------------------
+
+export type CellSummary = {
+  targetCount: number
+  rankedCount: number
+  notFoundCount: number
+  failedCount: number
+  pendingCount: number
+  top10Count: number
+  bestRank: number | null
+  averageRank: number | null
+}
+
+export function summarizeCells(cells: RankCell[]): CellSummary {
+  const summary: CellSummary = {
+    targetCount: cells.length,
+    rankedCount: 0,
+    notFoundCount: 0,
+    failedCount: 0,
+    pendingCount: 0,
+    top10Count: 0,
+    bestRank: null,
+    averageRank: null,
+  }
+
+  let rankSum = 0
+
+  for (const cell of cells) {
+    if (cell.state === "ranked" && cell.rank != null) {
+      summary.rankedCount += 1
+      rankSum += cell.rank
+      if (cell.rank <= 10) summary.top10Count += 1
+      if (summary.bestRank == null || cell.rank < summary.bestRank) {
+        summary.bestRank = cell.rank
+      }
+      continue
+    }
+
+    if (cell.state === "not-found") summary.notFoundCount += 1
+    else if (cell.state === "failed") summary.failedCount += 1
+    else summary.pendingCount += 1
+  }
+
+  if (summary.rankedCount > 0) {
+    summary.averageRank = rankSum / summary.rankedCount
+  }
+
+  return summary
+}
+
+/** 已确认名次的 target 占比。未采集和采集异常都不算「有排名」。 */
+export function visibilityPercent(rankedCount: number, targetCount: number): number {
+  if (targetCount === 0) return 0
+  return (rankedCount / targetCount) * 100
+}
+
+// ---------------------------------------------------------------------------
+// Formatting
+// ---------------------------------------------------------------------------
 
 export function formatAverageRank(value: number | null): string {
-  return value == null ? "NR" : value.toFixed(1)
+  return value == null ? "—" : value.toFixed(1)
 }
 
-export function formatRelativeMinutes(minutes: number): string {
+export function formatPercent(value: number, digits = 0): string {
+  return `${value.toFixed(digits)}%`
+}
+
+export function formatRelativeTime(iso: string | null): string {
+  if (!iso) return "never"
+
+  const timestamp = new Date(iso).getTime()
+  if (Number.isNaN(timestamp)) return "unknown"
+
+  const minutes = Math.floor((Date.now() - timestamp) / 60_000)
   if (minutes < 1) return "just now"
   if (minutes < 60) return `${minutes} min ago`
 
@@ -111,58 +211,16 @@ export function formatRelativeMinutes(minutes: number): string {
   return `${days} ${days === 1 ? "day" : "days"} ago`
 }
 
-export function formatDelta(value: number, digits = 1): string {
-  const sign = value > 0 ? "+" : value < 0 ? "\u2212" : ""
-  return `${sign}${Math.abs(value).toFixed(digits)}`
-}
+/** Fixed UTC format — avoids locale-dependent output between server and client. */
+export function formatDateTime(iso: string | null): string {
+  if (!iso) return "—"
 
-export type KeywordSummary = {
-  bestRank: number | null
-  bestLocale: LocaleCode | null
-  averageRank: number | null
-  rankedCount: number
-}
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return "—"
 
-export function summarizeKeyword(
-  keyword: RankedKeyword,
-  localeCodes: LocaleCode[],
-): KeywordSummary {
-  let bestRank: number | null = null
-  let bestLocale: LocaleCode | null = null
-
-  for (const code of localeCodes) {
-    const rank = keyword.ranks[code]
-    if (!isRanked(rank)) continue
-    if (bestRank == null || rank < bestRank) {
-      bestRank = rank
-      bestLocale = code
-    }
-  }
-
-  return {
-    bestRank,
-    bestLocale,
-    averageRank: averageRank(localeCodes.map((code) => keyword.ranks[code])),
-    rankedCount: localeCodes.filter((code) => isRanked(keyword.ranks[code])).length,
-  }
-}
-
-export type LocaleSummary = {
-  rankedCount: number
-  top10Count: number
-  averageRank: number | null
-}
-
-export function summarizeLocale(
-  keywords: RankedKeyword[],
-  code: LocaleCode,
-): LocaleSummary {
-  const ranks = keywords.map((keyword) => keyword.ranks[code])
-  const ranked = ranks.filter(isRanked)
-
-  return {
-    rankedCount: ranked.length,
-    top10Count: ranked.filter((rank) => rank <= 10).length,
-    averageRank: averageRank(ranks),
-  }
+  const pad = (value: number) => String(value).padStart(2, "0")
+  return [
+    `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`,
+    `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())} UTC`,
+  ].join(" ")
 }

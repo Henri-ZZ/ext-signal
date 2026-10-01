@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 
 import { AccountMenu } from "@/components/dashboard/account-menu"
+import type { SessionUser } from "@/lib/session"
 import {
   Sidebar,
   SidebarContent,
@@ -48,7 +49,7 @@ function isActiveRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function AppSidebar() {
+export function AppSidebar({ user }: { user: SessionUser }) {
   const pathname = usePathname()
 
   return (
@@ -117,7 +118,7 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <AccountMenu />
+            <AccountMenu user={user} />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
