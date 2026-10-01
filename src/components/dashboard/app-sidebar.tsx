@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -59,9 +60,14 @@ export function AppSidebar({ user }: { user: SessionUser }) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/dashboard">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary font-mono text-[0.625rem] font-semibold tracking-tight text-primary-foreground">
-                  ES
-                </span>
+                <Image
+                  src="/logo.png"
+                  alt=""
+                  width={28}
+                  height={28}
+                  priority
+                  className="size-7 shrink-0"
+                />
                 <span className="grid flex-1 text-left leading-tight">
                   <span className="font-heading truncate text-sm font-semibold">
                     ExtSignal

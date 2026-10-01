@@ -82,6 +82,8 @@ extension is still created — ext-probe backfills metadata on its next collecti
 ## Project structure
 
 ```
+assets/logo.png                # brand source (1254px), not served — 界面与图标用的
+                               #   public/logo.png、src/app/icon.png、apple-icon.png 都由它生成
 db/schema.sql                  # tables + target_latest view
 src/
   app/

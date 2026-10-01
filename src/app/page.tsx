@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
@@ -7,6 +8,14 @@ export default function HomePage() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-24 text-center">
       <div className="grid justify-items-center gap-3">
+        <Image
+          src="/logo.png"
+          alt=""
+          width={72}
+          height={72}
+          priority
+          className="mb-1 size-18"
+        />
         <span className="font-mono text-xs tracking-[0.18em] text-muted-foreground uppercase">
           Chrome Web Store search intelligence
         </span>
