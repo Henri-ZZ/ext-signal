@@ -1,3 +1,11 @@
+
 allowBuilds:
   sharp: false
   unrs-resolver: false
+
+# shadcn CLI pins zod@3.24.x, but its bundled @modelcontextprotocol/sdk imports
+# the `zod/v4` subpath which only exists from zod 3.25. Scope the override to the
+# sdk so the rest of the dependency tree keeps its own zod resolution.
+overrides:
+  "shadcn>zod": 3.25.76
+  "@modelcontextprotocol/sdk>zod": 3.25.76
