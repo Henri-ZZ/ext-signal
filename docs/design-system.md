@@ -166,6 +166,9 @@ saturated green block. `--sidebar-accent` is hover; `--sidebar-selected` is sele
 `SidebarMenuButton` was patched to use them separately — if you add a new sidebar primitive, keep
 that split.
 
+The footer holds the account menu only. **Settings lives inside that menu, not as a sidebar row** —
+it was moved deliberately, so don't add it back to the footer.
+
 ---
 
 ## 8. Tables

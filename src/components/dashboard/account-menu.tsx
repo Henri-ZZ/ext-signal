@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ChevronsUpDown, Loader2, LogOut, Settings, User } from "lucide-react"
 
@@ -71,9 +72,13 @@ export function AccountMenu({ user }: { user: SessionUser }) {
             <User />
             Account
           </DropdownMenuItem>
-          <DropdownMenuItem disabled>
-            <Settings />
-            Workspace settings
+          {/* Settings moved here from the sidebar footer: the account menu is
+              the conventional home for it in a sidebar-first app. */}
+          <DropdownMenuItem asChild>
+            <Link href="/dashboard/settings">
+              <Settings />
+              Settings
+            </Link>
           </DropdownMenuItem>
           <ThemeMenu />
         </DropdownMenuGroup>

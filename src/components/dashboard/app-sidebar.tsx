@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Puzzle,
   Search,
-  Settings,
   Swords,
   type LucideIcon,
 } from "lucide-react"
@@ -111,18 +110,6 @@ export function AppSidebar({ user }: { user: SessionUser }) {
 
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={isActiveRoute(pathname, "/dashboard/settings")}
-              tooltip="Settings"
-            >
-              <Link href="/dashboard/settings">
-                <Settings />
-                <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <AccountMenu user={user} />
           </SidebarMenuItem>
