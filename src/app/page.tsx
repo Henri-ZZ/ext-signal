@@ -47,6 +47,15 @@ export default async function HomePage() {
           </p>
         ) : null}
       </div>
+
+      <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        <Link href="/privacy" className="underline-offset-4 hover:text-foreground hover:underline">
+          Privacy
+        </Link>
+        <Link href="/terms" className="underline-offset-4 hover:text-foreground hover:underline">
+          Terms
+        </Link>
+      </footer>
     </main>
   )
 }
