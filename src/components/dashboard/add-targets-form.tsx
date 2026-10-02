@@ -77,7 +77,9 @@ export function AddTargetsForm({
               <span
                 className={cn(
                   "inline-flex h-6 items-center rounded-md border px-2 font-mono text-xs text-muted-foreground transition-colors select-none",
-                  "peer-checked:border-foreground/25 peer-checked:bg-foreground/[0.07] peer-checked:text-foreground",
+                  // Selected state is brand green, not neutral: selection is one
+                  // of the few places the design system spends colour.
+                  "peer-checked:border-primary/45 peer-checked:bg-primary-soft peer-checked:text-primary-active",
                   "peer-focus-visible:ring-2 peer-focus-visible:ring-ring/50",
                 )}
               >

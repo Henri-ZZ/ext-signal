@@ -9,9 +9,7 @@ export function FormMessage({ state }: { state: FormState }) {
       role="status"
       className={cn(
         "text-xs",
-        state.status === "error"
-          ? "text-destructive"
-          : "text-emerald-600 dark:text-emerald-400",
+        state.status === "error" ? "text-destructive" : "text-success",
       )}
     >
       {state.message}

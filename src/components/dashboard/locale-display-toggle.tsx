@@ -42,7 +42,9 @@ export function LocaleDisplayToggle({ showRegion }: { showRegion: boolean }) {
             className="peer sr-only"
           />
           <span
-            className="relative h-5 w-9 shrink-0 rounded-full bg-muted transition-colors after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-background after:transition-transform after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-ring/50 peer-disabled:opacity-50"
+            // `bg-input` instead of `bg-muted`: the off track has to stay
+            // visible against the card, especially in dark mode.
+            className="relative h-5 w-9 shrink-0 rounded-full bg-input transition-colors after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-card after:transition-transform after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-4 peer-checked:after:bg-primary-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-ring/50 peer-disabled:opacity-50"
             aria-hidden
           />
         </span>

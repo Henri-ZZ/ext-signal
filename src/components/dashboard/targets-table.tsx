@@ -81,7 +81,7 @@ function buildColumns(showRegion: boolean): DataTableColumn<TargetEntry>[] {
         ) : null}
         {entry.cell.failures > 1 ? (
           <span
-            className="text-xs text-amber-600 dark:text-amber-400"
+            className="text-xs text-warning"
             title={cellDescription(entry.cell)}
           >
             {entry.cell.failures}× failing

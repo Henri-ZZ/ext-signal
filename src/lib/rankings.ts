@@ -55,19 +55,21 @@ type RankTierMeta = {
 }
 
 export const RANK_TIER_META: Record<RankTier, RankTierMeta> = {
+  // Only Top 3 gets a fill: a matrix where every Top 10 cell is tinted turns
+  // into a green checkerboard, which the design system explicitly rules out.
   top3: {
     label: "Top 3",
-    cell: "bg-emerald-500/10 font-semibold text-emerald-700 dark:text-emerald-400",
-    swatch: "bg-emerald-500/60",
+    cell: "bg-ranking-highlight font-semibold text-ranking-top",
+    swatch: "bg-ranking-top",
   },
   top10: {
     label: "Top 10",
-    cell: "bg-foreground/[0.07] font-medium text-foreground dark:bg-foreground/15",
-    swatch: "bg-foreground/35",
+    cell: "font-medium text-ranking-top10",
+    swatch: "bg-ranking-top10",
   },
   top20: {
     label: "Top 20",
-    cell: "text-foreground/80",
+    cell: "text-foreground",
     swatch: "bg-foreground/20",
   },
   top50: {
@@ -104,9 +106,9 @@ export function cellStyle(cell: RankCell): string {
     return "text-muted-foreground"
   }
   if (cell.state === "failed") {
-    return "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+    return "bg-warning-soft text-warning"
   }
-  return "text-muted-foreground/40"
+  return "text-muted-foreground/60"
 }
 
 export function cellLabel(cell: RankCell): string {

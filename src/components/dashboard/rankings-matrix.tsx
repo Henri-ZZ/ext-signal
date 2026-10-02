@@ -84,7 +84,7 @@ function RankTierLegend() {
         </span>
       ))}
       <span className="flex items-center gap-1.5">
-        <span className="size-2.5 rounded-[3px] bg-amber-500/50" />
+        <span className="size-2.5 rounded-[3px] bg-warning/60" />
         Failed
       </span>
       <span className="flex items-center gap-1.5">
