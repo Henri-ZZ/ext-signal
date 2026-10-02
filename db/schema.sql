@@ -57,6 +57,8 @@ CREATE INDEX IF NOT EXISTS extensions_owner_created_idx
 -- ok   = 最近一次成功采集，target_rank 为数字即已排名，为 NULL 即 NR
 --        （not_found_within 表示已可靠检查到的名次范围）。
 -- fail = 最近一次失败采集。既没有 ok 也没有 fail 时前端显示「待采集」。
+-- cs   = 该 (keyword, locale) 组的失败退避状态（由 ext-probe 写入），
+--        用于在界面上区分「刚失败一次」和「连续失败已进入冷却」。
 CREATE OR REPLACE VIEW target_latest AS
 SELECT
   t.id AS target_id,
@@ -71,7 +73,9 @@ SELECT
   ok.not_found_within,
   ok.collected_at,
   fail.error_message AS failed_message,
-  fail.collected_at AS failed_at
+  fail.collected_at AS failed_at,
+  COALESCE(cs.consecutive_failures, 0) AS consecutive_failures,
+  cs.next_attempt_at AS retry_after
 FROM tracking_targets t
 JOIN extensions e ON e.id = t.extension_id
 LEFT JOIN LATERAL (
@@ -93,4 +97,6 @@ LEFT JOIN LATERAL (
     AND rr.status = 'failed'
   ORDER BY rr.collected_at DESC
   LIMIT 1
-) fail ON true;
+) fail ON true
+LEFT JOIN collection_state cs
+  ON cs.keyword = t.keyword AND cs.locale = t.locale;

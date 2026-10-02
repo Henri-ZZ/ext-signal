@@ -205,11 +205,15 @@ type TargetRow = {
   collected_at: unknown
   failed_message: string | null
   failed_at: unknown
+  consecutive_failures: unknown
+  retry_after: unknown
 }
 
 function toCell(row: TargetRow): RankCell {
   const rank = toNumber(row.target_rank)
   const collectedAt = toIsoString(row.collected_at)
+  const failures = toNumber(row.consecutive_failures) ?? 0
+  const retryAfter = toIsoString(row.retry_after)
 
   if (rank != null) {
     return {
@@ -218,6 +222,8 @@ function toCell(row: TargetRow): RankCell {
       checkedWithin: null,
       collectedAt,
       message: null,
+      failures,
+      retryAfter,
     }
   }
 
@@ -228,6 +234,8 @@ function toCell(row: TargetRow): RankCell {
       checkedWithin: toNumber(row.not_found_within),
       collectedAt,
       message: null,
+      failures,
+      retryAfter,
     }
   }
 
@@ -239,6 +247,8 @@ function toCell(row: TargetRow): RankCell {
       checkedWithin: null,
       collectedAt: failedAt,
       message: row.failed_message,
+      failures,
+      retryAfter,
     }
   }
 
@@ -259,7 +269,9 @@ export async function getRankingsMatrix(
       tl.not_found_within,
       tl.collected_at,
       tl.failed_message,
-      tl.failed_at
+      tl.failed_at,
+      tl.consecutive_failures,
+      tl.retry_after
     FROM target_latest tl
     WHERE tl.extension_id = ${extensionId}::uuid
     ORDER BY

@@ -16,6 +16,7 @@ import {
   cellLabel,
   cellStyle,
   formatRelativeTime,
+  formatRelativeTimeFromNow,
 } from "@/lib/rankings"
 import { cn } from "@/lib/utils"
 
@@ -77,6 +78,17 @@ function buildColumns(showRegion: boolean): DataTableColumn<TargetEntry>[] {
         </span>
         {!entry.cell.enabled ? (
           <span className="text-xs text-muted-foreground">paused</span>
+        ) : null}
+        {entry.cell.failures > 1 ? (
+          <span
+            className="text-xs text-amber-600 dark:text-amber-400"
+            title={cellDescription(entry.cell)}
+          >
+            {entry.cell.failures}× failing
+            {entry.cell.retryAfter
+              ? ` · retry ${formatRelativeTimeFromNow(entry.cell.retryAfter)}`
+              : ""}
+          </span>
         ) : null}
       </span>
     ),

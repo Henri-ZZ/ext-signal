@@ -22,6 +22,10 @@ export type RankCell = {
   checkedWithin: number | null
   collectedAt: string | null
   message: string | null
+  /** 连续采集失败次数（ext-probe 的 collection_state）。 */
+  failures: number
+  /** 退避到期时间。非空表示探针正在冷却这一组，到期前不会重试。 */
+  retryAfter: string | null
 }
 
 export const PENDING_CELL: RankCell = {
@@ -30,6 +34,8 @@ export const PENDING_CELL: RankCell = {
   checkedWithin: null,
   collectedAt: null,
   message: null,
+  failures: 0,
+  retryAfter: null,
 }
 
 export type RankTier = "top3" | "top10" | "top20" | "top50" | "unranked"
@@ -119,9 +125,21 @@ export function cellDescription(cell: RankCell): string {
     return `Not ranked within the top ${within} · collected ${formatRelativeTime(cell.collectedAt)}`
   }
   if (cell.state === "failed") {
-    return `Last collection failed${cell.message ? `: ${cell.message}` : ""}`
+    const parts = [
+      `Last collection failed${cell.message ? `: ${cell.message}` : ""}`,
+    ]
+    if (cell.failures > 1) parts.push(`${cell.failures} consecutive failures`)
+    if (cell.retryAfter) {
+      parts.push(`retrying ${formatRelativeTimeFromNow(cell.retryAfter)}`)
+    }
+    return parts.join(" · ")
   }
   return "Not collected yet"
+}
+
+/** 该组是否正处在失败退避（冷却）中。 */
+export function isBackingOff(cell: RankCell): boolean {
+  return cell.state === "failed" && cell.retryAfter !== null
 }
 
 // ---------------------------------------------------------------------------
@@ -209,6 +227,24 @@ export function formatRelativeTime(iso: string | null): string {
 
   const days = Math.floor(hours / 24)
   return `${days} ${days === 1 ? "day" : "days"} ago`
+}
+
+/** 未来的时间点，例如 `in 12 hours`。 */
+export function formatRelativeTimeFromNow(iso: string | null): string {
+  if (!iso) return "unknown"
+
+  const timestamp = new Date(iso).getTime()
+  if (Number.isNaN(timestamp)) return "unknown"
+
+  const minutes = Math.round((timestamp - Date.now()) / 60_000)
+  if (minutes <= 0) return "shortly"
+  if (minutes < 60) return `in ${minutes} min`
+
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `in ${hours} ${hours === 1 ? "hour" : "hours"}`
+
+  const days = Math.round(hours / 24)
+  return `in ${days} ${days === 1 ? "day" : "days"}`
 }
 
 /** Fixed UTC format — avoids locale-dependent output between server and client. */
