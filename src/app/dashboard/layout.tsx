@@ -1,6 +1,6 @@
 import { AppSidebar } from "@/components/dashboard/app-sidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { getCurrentUser } from "@/lib/session"
+import { requireCurrentUser } from "@/lib/session"
 
 /**
  * Every dashboard route reads live data from Neon, so the whole segment is
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic"
 export default async function DashboardLayout({
   children,
 }: LayoutProps<"/dashboard">) {
-  const user = await getCurrentUser()
+  const user = await requireCurrentUser()
 
   return (
     <SidebarProvider>

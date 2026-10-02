@@ -5,14 +5,14 @@ import { LocaleDisplayToggle } from "@/components/dashboard/locale-display-toggl
 import { Panel } from "@/components/dashboard/panel"
 import { SectionHeading } from "@/components/dashboard/section-heading"
 import { getUserPreferences } from "@/data/preferences"
-import { getCurrentUser } from "@/lib/session"
+import { requireCurrentUser } from "@/lib/session"
 
 export const metadata: Metadata = {
   title: "Settings",
 }
 
 export default async function SettingsPage() {
-  const user = await getCurrentUser()
+  const user = await requireCurrentUser()
   const preferences = await getUserPreferences(user.email)
 
   return (

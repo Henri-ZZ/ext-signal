@@ -3,8 +3,13 @@ import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { getCurrentUser } from "@/lib/session"
 
-export default function HomePage() {
+export const dynamic = "force-dynamic"
+
+export default async function HomePage() {
+  const user = await getCurrentUser()
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-24 text-center">
       <div className="grid justify-items-center gap-3">
@@ -28,12 +33,20 @@ export default function HomePage() {
         </p>
       </div>
 
-      <Button asChild size="lg">
-        <Link href="/dashboard">
-          Open Dashboard
-          <ArrowRight data-icon="inline-end" />
-        </Link>
-      </Button>
+      <div className="flex flex-col items-center gap-3">
+        <Button asChild size="lg">
+          <Link href={user ? "/dashboard" : "/auth/sign-in"}>
+            {user ? "Open Dashboard" : "Sign in"}
+            <ArrowRight data-icon="inline-end" />
+          </Link>
+        </Button>
+
+        {user ? (
+          <p className="text-xs text-muted-foreground">
+            Signed in as {user.email}
+          </p>
+        ) : null}
+      </div>
     </main>
   )
 }

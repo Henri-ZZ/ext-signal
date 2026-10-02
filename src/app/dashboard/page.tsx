@@ -24,7 +24,7 @@ import {
   listExtensions,
 } from "@/data/extensions"
 import { formatRelativeTime } from "@/lib/rankings"
-import { getCurrentUser } from "@/lib/session"
+import { requireCurrentUser } from "@/lib/session"
 
 export const metadata: Metadata = {
   title: "Overview",
@@ -45,7 +45,7 @@ function collectionSummary(
 }
 
 export default async function DashboardOverviewPage() {
-  const user = await getCurrentUser()
+  const user = await requireCurrentUser()
   const [stats, extensions, history, collection] = await Promise.all([
     getOverviewStats(user.email),
     listExtensions(user.email),

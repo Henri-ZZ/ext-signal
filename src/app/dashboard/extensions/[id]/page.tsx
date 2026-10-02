@@ -21,7 +21,7 @@ import {
   getRankingsMatrix,
 } from "@/data/extensions"
 import { getUserPreferences } from "@/data/preferences"
-import { getCurrentUser } from "@/lib/session"
+import { getCurrentUser, requireCurrentUser } from "@/lib/session"
 
 type ExtensionPageProps = PageProps<"/dashboard/extensions/[id]">
 
@@ -29,7 +29,11 @@ export async function generateMetadata({
   params,
 }: ExtensionPageProps): Promise<Metadata> {
   const { id } = await params
+  // `redirect()` is not allowed while generating metadata, so an anonymous
+  // request gets the generic title and the page itself handles the redirect.
   const user = await getCurrentUser()
+  if (!user) return { title: "Extension" }
+
   const extension = await getExtensionSummary(user.email, id)
 
   return {
@@ -41,7 +45,7 @@ export default async function ExtensionDetailPage({
   params,
 }: ExtensionPageProps) {
   const { id } = await params
-  const user = await getCurrentUser()
+  const user = await requireCurrentUser()
   const extension = await getExtensionSummary(user.email, id)
 
   if (!extension) {

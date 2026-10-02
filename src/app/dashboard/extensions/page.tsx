@@ -6,14 +6,14 @@ import { EmptyState } from "@/components/dashboard/empty-state"
 import { ExtensionsTable } from "@/components/dashboard/extensions-table"
 import { Panel } from "@/components/dashboard/panel"
 import { listExtensions } from "@/data/extensions"
-import { getCurrentUser } from "@/lib/session"
+import { requireCurrentUser } from "@/lib/session"
 
 export const metadata: Metadata = {
   title: "Extensions",
 }
 
 export default async function ExtensionsPage() {
-  const user = await getCurrentUser()
+  const user = await requireCurrentUser()
   const extensions = await listExtensions(user.email)
 
   return (

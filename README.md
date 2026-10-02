@@ -20,29 +20,36 @@ crawls the Chrome Web Store itself.
 | UI        | shadcn/ui + Radix primitives + Lucide Icons   |
 | Charts    | Recharts via shadcn chart components          |
 | Database  | Neon Postgres (`@neondatabase/serverless`)    |
+| Auth      | Neon Auth (Managed Better Auth), Google only  |
 | Package   | pnpm (only pnpm — no npm/yarn lockfiles)      |
 
 ## Getting started
 
 ```bash
 pnpm install
-cp .env.example .env.local   # then fill in DATABASE_URL
+cp .env.example .env.local   # then fill in DATABASE_URL and the NEON_AUTH_* pair
 pnpm dev
 ```
 
-`/` is a placeholder entry point; the dashboard lives at `/dashboard`.
+`/` is a placeholder entry point; the dashboard lives at `/dashboard` and requires signing in.
 
 ### Environment variables
 
-| Variable            | Required | Purpose                                                                 |
-| ------------------- | -------- | ----------------------------------------------------------------------- |
-| `DATABASE_URL`      | yes      | Neon connection string, shared with ext-probe                                     |
-| `EXT_PROBE_URL`     | no       | ext-probe Worker base URL — used by **Track now** and by metadata resolve on add  |
-| `EXT_PROBE_TOKEN`   | no       | `MANUAL_TRIGGER_TOKEN` of the ext-probe Worker                                    |
+| Variable                  | Required | Purpose                                                                          |
+| ------------------------- | -------- | -------------------------------------------------------------------------------- |
+| `DATABASE_URL`            | yes      | Neon connection string, shared with ext-probe                                    |
+| `NEON_AUTH_BASE_URL`      | yes      | Neon Console → branch → **Auth → Configuration** → Auth URL                       |
+| `NEON_AUTH_COOKIE_SECRET` | yes      | `openssl rand -base64 32` — signs the session-data cookie (min 32 characters)     |
+| `EXT_PROBE_URL`           | no       | ext-probe Worker base URL — used by **Track now** and by metadata resolve on add  |
+| `EXT_PROBE_TOKEN`         | no       | `MANUAL_TRIGGER_TOKEN` of the ext-probe Worker                                    |
 
 Without `EXT_PROBE_URL` / `EXT_PROBE_TOKEN` everything still works: the manual trigger reports that it
 is not configured, and a newly added extension shows a monogram fallback until ext-probe backfills
 its title and icon on the next collection. Scheduled collection keeps running on Cloudflare regardless.
+
+Auth configuration is read lazily on the first request that needs it, not at import time, so `pnpm build`
+and preview deployments succeed without the secrets. A deployment that is missing them returns a clear
+error instead of silently treating every visitor as the same user.
 
 ### Scripts
 
@@ -86,7 +93,10 @@ assets/logo.png                # brand source (1254px), not served — 界面与
                                #   public/logo.png、src/app/icon.png、apple-icon.png 都由它生成
 db/schema.sql                  # tables + target_latest view
 src/
+  proxy.ts                     # route protection for /dashboard/* (Next 16 proxy)
   app/
+    api/auth/[...path]/route.ts # Better Auth → Neon Auth proxy
+    auth/sign-in/page.tsx      # Google sign-in screen
     dashboard/
       layout.tsx               # sidebar shell, force-dynamic
       actions.ts               # Server Actions: add/remove extension, manage targets, trigger probe
@@ -97,8 +107,10 @@ src/
     ui/                        # shadcn/ui primitives
   data/extensions.ts           # all Neon reads
   lib/
-    db.ts                      # Neon client + value normalisation
+    auth/server.ts             # Neon Auth server instance (lazily configured)
+    auth/client.ts             # browser auth client (same-origin /api/auth)
     session.ts                 # current-user seam
+    db.ts                      # Neon client + value normalisation
     rankings.ts                # rank tiers, aggregation, formatting
     cws.ts                     # Chrome Web Store URL / ID parsing
     locales.ts                 # locale codes shared with ext-probe
@@ -136,14 +148,34 @@ Any public listing can be tracked; there is no ownership verification and no "my
 
 ## Authentication
 
-Not wired up yet. `src/lib/session.ts` is the single seam that resolves the current user and currently
-returns a hardcoded workspace owner (`henri@henriz.dev`). Everything else — Server Actions, queries,
-ownership checks — already scopes by that email, so adding Neon Auth means replacing that one function.
+Sign-in is Neon Auth (Managed Better Auth) with **Google as the only provider**. Google currently runs on
+Neon's _shared_ OAuth credentials, so no Google Cloud project is needed — but the consent screen shows
+Neon's branding. Before launch, add your own client ID and secret under
+Console → branch → **Auth → OAuth providers** and point Google's authorized redirect URI at
+`{NEON_AUTH_BASE_URL}/callback/google`.
+
+How it fits together:
+
+- `src/proxy.ts` protects `/dashboard/*` and refreshes the session cookie on every dashboard request.
+  Anonymous visitors are redirected to `/auth/sign-in?next=<original path>`; `next` is validated to a
+  same-origin relative path before use, so it cannot be turned into an open redirect. The middleware only
+  runs where the matcher points, so `/` and `/auth/*` are never blocked.
+- `src/app/api/auth/[...path]/route.ts` proxies every Better Auth call to Neon Auth. The browser client
+  (`src/lib/auth/client.ts`) talks only to that same-origin route, so the auth URL is never exposed
+  client-side.
+- `src/lib/session.ts` is the single seam the app consumes: `requireCurrentUser()` for anything that needs
+  a user, `getCurrentUser()` when `null` is meaningful.
+
+Ownership is keyed on email (`extensions.owner_email`, `tracking_targets`, `user_preferences`), so a
+signed-in account only ever sees its own rows. The existing data belongs to `henri@henriz.dev` — sign in
+with that Google account to see it; signing in with any other address yields an empty workspace.
 
 ## Deployment
 
-Web: Next.js on Vercel. Dashboard routes are `force-dynamic`, and `pnpm build` does not require database
-access, so a build succeeds without `DATABASE_URL`; the env var must be set in the Vercel project.
+Web: Next.js on Vercel. Dashboard routes are `force-dynamic`, and `pnpm build` requires neither database
+nor auth access, so a build succeeds without secrets — but `DATABASE_URL`, `NEON_AUTH_BASE_URL` and
+`NEON_AUTH_COOKIE_SECRET` must all be set in the Vercel project for the app to work at runtime.
+Add the production domain to Neon Auth's trusted domains, or sign-in redirects will be rejected.
 
 Crawler: Cloudflare Workers (separate repository, ext-probe).
 
@@ -151,7 +183,7 @@ Cold historical storage: Cloudflare R2, for long-term rank history (future).
 
 ## Roadmap
 
-1. Wire up Neon Auth and replace the user seam.
+1. Replace Neon's shared Google credentials with our own OAuth client, and add more providers.
 2. Add TanStack Table for client-side sorting/filtering/pagination on the Extensions and Keywords tables.
 3. Sync extension titles and metadata (belongs in ext-probe, since it requires fetching store pages).
 4. Historical rank charts per keyword × locale, not just the aggregate.

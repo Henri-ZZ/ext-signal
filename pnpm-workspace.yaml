@@ -1,5 +1,7 @@
-
 allowBuilds:
+  # core-js 的 postinstall 只打印捐赠提示；@neondatabase/auth 把它带了进来，
+  # 拒绝执行即可（留成占位字符串会让 pnpm 的依赖检查直接失败）。
+  core-js: false
   sharp: false
   unrs-resolver: false
 
