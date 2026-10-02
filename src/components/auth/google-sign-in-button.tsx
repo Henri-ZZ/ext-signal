@@ -19,6 +19,10 @@ export function GoogleSignInButton({ next }: { next: string }) {
       const { error: authError } = await authClient.signIn.social({
         provider: "google",
         callbackURL: next,
+        // Without this, Neon Auth sends accounts created by this very sign-in to
+        // the bare origin instead of `next`, which lands the user on the
+        // marketing page while the session handshake finishes elsewhere.
+        newUserCallbackURL: next,
       })
 
       if (authError) {
