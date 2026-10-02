@@ -7,7 +7,11 @@ import { FormMessage } from "@/components/dashboard/form-message"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { INITIAL_FORM_STATE } from "@/lib/form-state"
-import { SUPPORTED_LOCALES } from "@/lib/locales"
+import {
+  formatLocaleLabel,
+  localeDescription,
+  SUPPORTED_LOCALES,
+} from "@/lib/locales"
 import { cn } from "@/lib/utils"
 
 /**
@@ -15,7 +19,13 @@ import { cn } from "@/lib/utils"
  * every selected locale. Locale chips are plain checkboxes so the whole form
  * works without any client-side state.
  */
-export function AddTargetsForm({ extensionId }: { extensionId: string }) {
+export function AddTargetsForm({
+  extensionId,
+  showRegion,
+}: {
+  extensionId: string
+  showRegion: boolean
+}) {
   const [state, formAction, isPending] = useActionState(
     addTargetsAction,
     INITIAL_FORM_STATE,
@@ -52,7 +62,11 @@ export function AddTargetsForm({ extensionId }: { extensionId: string }) {
         <legend className="mb-1.5 text-xs font-medium">Locales</legend>
         <div className="flex flex-wrap gap-1.5">
           {SUPPORTED_LOCALES.map((locale) => (
-            <label key={locale.code} className="cursor-pointer" title={locale.name}>
+            <label
+              key={locale.code}
+              className="cursor-pointer"
+              title={localeDescription(locale.code)}
+            >
               <input
                 type="checkbox"
                 name="locales"
@@ -67,7 +81,7 @@ export function AddTargetsForm({ extensionId }: { extensionId: string }) {
                   "peer-focus-visible:ring-2 peer-focus-visible:ring-ring/50",
                 )}
               >
-                {locale.label}
+                {formatLocaleLabel(locale.code, showRegion)}
               </span>
             </label>
           ))}

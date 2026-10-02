@@ -20,6 +20,7 @@ import {
   getExtensionSummary,
   getRankingsMatrix,
 } from "@/data/extensions"
+import { getUserPreferences } from "@/data/preferences"
 import { getCurrentUser } from "@/lib/session"
 
 type ExtensionPageProps = PageProps<"/dashboard/extensions/[id]">
@@ -47,11 +48,14 @@ export default async function ExtensionDetailPage({
     notFound()
   }
 
-  const [matrix, history, competitors] = await Promise.all([
+  const [matrix, history, competitors, preferences] = await Promise.all([
     getRankingsMatrix(extension.id),
     getExtensionHistory(extension.cwsId, 30),
     getCompetitors(extension.cwsId),
+    getUserPreferences(user.email),
   ])
+
+  const showRegion = preferences.localeShowRegion
 
   const tabs: ExtensionTab[] = [
     {
@@ -68,12 +72,18 @@ export default async function ExtensionDetailPage({
     {
       value: "rankings",
       label: "Rankings",
-      content: <RankingsTab extension={extension} matrix={matrix} />,
+      content: (
+        <RankingsTab
+          extension={extension}
+          matrix={matrix}
+          showRegion={showRegion}
+        />
+      ),
     },
     {
       value: "keywords",
       label: "Keywords",
-      content: <KeywordsTab matrix={matrix} />,
+      content: <KeywordsTab matrix={matrix} showRegion={showRegion} />,
     },
     {
       value: "competitors",
@@ -83,7 +93,7 @@ export default async function ExtensionDetailPage({
     {
       value: "locales",
       label: "Locales",
-      content: <LocalesTab matrix={matrix} />,
+      content: <LocalesTab matrix={matrix} showRegion={showRegion} />,
     },
   ]
 

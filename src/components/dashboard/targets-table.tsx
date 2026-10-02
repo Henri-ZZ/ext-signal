@@ -10,7 +10,7 @@ import {
 } from "@/components/dashboard/data-table"
 import { Button } from "@/components/ui/button"
 import type { MatrixCell, RankingsMatrix } from "@/data/extensions"
-import { localeLabel } from "@/lib/locales"
+import { formatLocaleLabel } from "@/lib/locales"
 import {
   cellDescription,
   cellLabel,
@@ -45,19 +45,22 @@ function flatten(matrix: RankingsMatrix): TargetEntry[] {
   return entries
 }
 
-const columns: DataTableColumn<TargetEntry>[] = [
-  {
-    id: "keyword",
-    header: "Keyword",
-    cell: (entry) => <span className="font-medium">{entry.keyword}</span>,
-  },
-  {
-    id: "locale",
-    header: "Locale",
-    cell: (entry) => (
-      <span className="font-mono text-xs">{localeLabel(entry.locale)}</span>
-    ),
-  },
+function buildColumns(showRegion: boolean): DataTableColumn<TargetEntry>[] {
+  return [
+    {
+      id: "keyword",
+      header: "Keyword",
+      cell: (entry) => <span className="font-medium">{entry.keyword}</span>,
+    },
+    {
+      id: "locale",
+      header: "Locale",
+      cell: (entry) => (
+        <span className="font-mono text-xs">
+          {formatLocaleLabel(entry.locale, showRegion)}
+        </span>
+      ),
+    },
   {
     id: "status",
     header: "Status",
@@ -127,16 +130,23 @@ const columns: DataTableColumn<TargetEntry>[] = [
       </span>
     ),
   },
-]
+  ]
+}
 
-export function TargetsTable({ matrix }: { matrix: RankingsMatrix }) {
+export function TargetsTable({
+  matrix,
+  showRegion,
+}: {
+  matrix: RankingsMatrix
+  showRegion: boolean
+}) {
   const entries = flatten(matrix)
 
   if (entries.length === 0) return null
 
   return (
     <DataTable
-      columns={columns}
+      columns={buildColumns(showRegion)}
       rows={entries}
       getRowKey={(entry) => entry.targetId}
       className="min-w-[42rem]"

@@ -35,6 +35,14 @@ CREATE TABLE IF NOT EXISTS tracking_targets (
   CONSTRAINT tracking_targets_locale_not_blank CHECK (btrim(locale) <> '')
 );
 
+-- 用户级显示偏好。接入 Neon Auth 后 owner_email 换成 user_id。
+CREATE TABLE IF NOT EXISTS user_preferences (
+  owner_email text PRIMARY KEY,
+  -- 是否在 locale 代码前显示国家，例如 China (zh-CN)。
+  locale_show_region boolean NOT NULL DEFAULT false,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- 探针按 (keyword, locale) 归并任务时使用。
 CREATE INDEX IF NOT EXISTS tracking_targets_due_idx
   ON tracking_targets (enabled, keyword, locale);

@@ -151,6 +151,27 @@ export async function addTargetsAction(
   }
 }
 
+/** 只影响显示：locale 代码是否带上国家前缀。 */
+export async function setLocaleRegionAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireCurrentUser()
+  const showRegion = String(formData.get("localeShowRegion") ?? "") === "true"
+  const sql = getDb()
+
+  await sql`
+    INSERT INTO user_preferences (owner_email, locale_show_region)
+    VALUES (${user.email}, ${showRegion})
+    ON CONFLICT (owner_email) DO UPDATE SET
+      locale_show_region = EXCLUDED.locale_show_region,
+      updated_at = now()
+  `
+
+  revalidateDashboard()
+  return { status: "success", message: "" }
+}
+
 export async function setTargetEnabledAction(formData: FormData): Promise<void> {
   const user = await requireCurrentUser()
 

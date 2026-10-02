@@ -5,7 +5,7 @@ import {
   RANK_TIER_META,
   RANK_TIER_ORDER,
 } from "@/lib/rankings"
-import { localeLabel, localeName } from "@/lib/locales"
+import { formatLocaleLabel, localeDescription } from "@/lib/locales"
 import { cn } from "@/lib/utils"
 
 import type { RankingsMatrix as Matrix } from "@/data/extensions"
@@ -18,6 +18,58 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+
+type MatrixRow = Matrix["rows"][number]
+
+function buildColumns(
+  matrix: Matrix,
+  showRegion: boolean,
+): DataTableColumn<MatrixRow>[] {
+  return [
+    {
+      id: "keyword",
+      header: "Keyword",
+      cell: (row) => <span className="font-medium">{row.keyword}</span>,
+    },
+    ...matrix.locales.map<DataTableColumn<MatrixRow>>((locale) => ({
+      id: locale,
+      header: (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="font-mono">
+              {formatLocaleLabel(locale, showRegion)}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{localeDescription(locale)}</TooltipContent>
+        </Tooltip>
+      ),
+      align: "right",
+      cell: (row) => {
+        const cell = row.cells[locale]
+        if (!cell) {
+          return <span className="text-muted-foreground/30">·</span>
+        }
+
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className={cn(
+                  "inline-flex h-6 min-w-10 items-center justify-center rounded-md px-1.5 font-mono text-xs tabular-nums",
+                  cellStyle(cell),
+                  !cell.enabled && "opacity-50",
+                )}
+              >
+                {cellLabel(cell)}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{cellDescription(cell)}</TooltipContent>
+          </Tooltip>
+        )
+      },
+    })),
+  ]
+}
 
 function RankTierLegend() {
   return (
@@ -47,7 +99,13 @@ function RankTierLegend() {
  * The keyword x locale matrix — the core data shape of the product.
  * Columns are derived from the locales that are actually tracked.
  */
-export function RankingsMatrix({ matrix }: { matrix: Matrix }) {
+export function RankingsMatrix({
+  matrix,
+  showRegion,
+}: {
+  matrix: Matrix
+  showRegion: boolean
+}) {
   if (matrix.rows.length === 0) {
     return (
       <p className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -56,53 +114,10 @@ export function RankingsMatrix({ matrix }: { matrix: Matrix }) {
     )
   }
 
-  const columns: DataTableColumn<Matrix["rows"][number]>[] = [
-    {
-      id: "keyword",
-      header: "Keyword",
-      cell: (row) => <span className="font-medium">{row.keyword}</span>,
-    },
-    ...matrix.locales.map<DataTableColumn<Matrix["rows"][number]>>((locale) => ({
-      id: locale,
-      header: (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="font-mono">{localeLabel(locale)}</span>
-          </TooltipTrigger>
-          <TooltipContent>{localeName(locale)}</TooltipContent>
-        </Tooltip>
-      ),
-      align: "right",
-      cell: (row) => {
-        const cell = row.cells[locale]
-        if (!cell) {
-          return <span className="text-muted-foreground/30">·</span>
-        }
-
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                className={cn(
-                  "inline-flex h-6 min-w-10 items-center justify-center rounded-md px-1.5 font-mono text-xs tabular-nums",
-                  cellStyle(cell),
-                  !cell.enabled && "opacity-50",
-                )}
-              >
-                {cellLabel(cell)}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{cellDescription(cell)}</TooltipContent>
-          </Tooltip>
-        )
-      },
-    })),
-  ]
-
   return (
     <>
       <DataTable
-        columns={columns}
+        columns={buildColumns(matrix, showRegion)}
         rows={matrix.rows}
         getRowKey={(row) => row.keyword}
         className="min-w-[46rem]"

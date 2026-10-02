@@ -28,7 +28,10 @@ import type {
   MatrixRow,
   RankingsMatrix as Matrix,
 } from "@/data/extensions"
-import { localeLabel, localeName } from "@/lib/locales"
+import {
+  formatLocaleLabel,
+  localeDescription,
+} from "@/lib/locales"
 import {
   RANK_TIER_META,
   formatAverageRank,
@@ -158,9 +161,11 @@ export function OverviewTab({
 export function RankingsTab({
   extension,
   matrix,
+  showRegion,
 }: {
   extension: ExtensionSummary
   matrix: Matrix
+  showRegion: boolean
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -170,7 +175,10 @@ export function RankingsTab({
           description="Every keyword is tracked in every locale you select."
         />
         <Panel className="p-4">
-          <AddTargetsForm extensionId={extension.id} />
+          <AddTargetsForm
+            extensionId={extension.id}
+            showRegion={showRegion}
+          />
         </Panel>
       </section>
 
@@ -180,7 +188,7 @@ export function RankingsTab({
           description={`${matrix.rows.length} keywords across ${matrix.locales.length} locales · refreshed ${formatRelativeTime(extension.lastCollectedAt)}`}
         />
         <Panel>
-          <RankingsMatrix matrix={matrix} />
+          <RankingsMatrix matrix={matrix} showRegion={showRegion} />
         </Panel>
       </section>
 
@@ -190,14 +198,20 @@ export function RankingsTab({
           description="Pause or remove individual keyword × locale pairs."
         />
         <Panel>
-          <TargetsTable matrix={matrix} />
+          <TargetsTable matrix={matrix} showRegion={showRegion} />
         </Panel>
       </section>
     </div>
   )
 }
 
-export function KeywordsTab({ matrix }: { matrix: Matrix }) {
+export function KeywordsTab({
+  matrix,
+  showRegion,
+}: {
+  matrix: Matrix
+  showRegion: boolean
+}) {
   const columns: DataTableColumn<MatrixRow>[] = [
     {
       id: "keyword",
@@ -232,7 +246,9 @@ export function KeywordsTab({ matrix }: { matrix: Matrix }) {
       cell: (row) => {
         const best = bestRankedLocale(row, matrix.locales)
         return best ? (
-          <span className="font-mono text-xs">{localeLabel(best.locale)}</span>
+          <span className="font-mono text-xs">
+            {formatLocaleLabel(best.locale, showRegion)}
+          </span>
         ) : (
           <span className="text-muted-foreground">—</span>
         )
@@ -373,7 +389,13 @@ type LocaleRow = {
   targetCount: number
 }
 
-export function LocalesTab({ matrix }: { matrix: Matrix }) {
+export function LocalesTab({
+  matrix,
+  showRegion,
+}: {
+  matrix: Matrix
+  showRegion: boolean
+}) {
   const rows: LocaleRow[] = matrix.locales.map((locale) => {
     const summary = summarizeCells(
       matrix.rows.flatMap((row) => (row.cells[locale] ? [row.cells[locale]] : [])),
@@ -395,9 +417,11 @@ export function LocalesTab({ matrix }: { matrix: Matrix }) {
       cell: (row) => (
         <span className="flex items-center gap-2">
           <Badge variant="outline" className="font-mono">
-            {localeLabel(row.locale)}
+            {formatLocaleLabel(row.locale, showRegion)}
           </Badge>
-          <span className="text-muted-foreground">{localeName(row.locale)}</span>
+          <span className="text-muted-foreground">
+            {localeDescription(row.locale)}
+          </span>
         </span>
       ),
     },
