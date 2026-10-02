@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar"
+import { ThemeMenu } from "@/components/dashboard/theme-menu"
 import { authClient } from "@/lib/auth/client"
 import type { SessionUser } from "@/lib/session"
 
@@ -74,6 +75,7 @@ export function AccountMenu({ user }: { user: SessionUser }) {
             <Settings />
             Workspace settings
           </DropdownMenuItem>
+          <ThemeMenu />
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem
