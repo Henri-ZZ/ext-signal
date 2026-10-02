@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# 一次性运维凭据（Neon 管理操作临时存放，用完即删）
+.neon-ops.local
+
 # vercel
 .vercel
 
