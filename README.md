@@ -19,6 +19,7 @@ crawls the Chrome Web Store itself.
 | Styling   | Tailwind CSS v4                               |
 | UI        | shadcn/ui + Radix primitives + Lucide Icons   |
 | Charts    | Recharts via shadcn chart components          |
+| Theming   | Semantic tokens in `globals.css` + `next-themes` — see `docs/design-system.md` |
 | Database  | Neon Postgres (`@neondatabase/serverless`)    |
 | Auth      | Neon Auth (Managed Better Auth), Google only  |
 | Package   | pnpm (only pnpm — no npm/yarn lockfiles)      |
@@ -92,11 +93,13 @@ extension is still created — ext-probe backfills metadata on its next collecti
 assets/logo.png                # brand source (1254px), NOT served — the icons below
                                #   are downsized from it; see "Brand assets"
 db/schema.sql                  # tables + target_latest view
+docs/design-system.md          # the UI contract — read before adding UI
 src/
   proxy.ts                     # route protection for /dashboard/* (Next 16 proxy)
   app/
     api/auth/[...path]/route.ts # Better Auth → Neon Auth proxy
     auth/sign-in/page.tsx      # Google sign-in screen
+    design-system/page.tsx     # token/component reference (dev only, 404 in prod)
     dashboard/
       layout.tsx               # sidebar shell, force-dynamic
       actions.ts               # Server Actions: add/remove extension, manage targets, trigger probe
@@ -140,6 +143,20 @@ The three files under `src/app/` are picked up automatically by Next's file-base
 
 The 16px entry is inherently muddy — the artwork carries far more detail than fits in 16 pixels. A
 crisp tab icon at that size would need a simplified mark, not a downscale.
+
+## Design system
+
+The visual contract lives in [`docs/design-system.md`](docs/design-system.md) — brand colour,
+light and dark palettes, semantic tokens, and the rules for buttons, tables, ranking colours,
+charts and forms. **Read it before adding UI.**
+
+All tokens are declared in `src/app/globals.css` as `oklch()` with the source hex in a trailing
+comment. Components consume semantic classes (`bg-card`, `text-muted-foreground`, `text-ranking-top`)
+and never hardcode a hex — there are currently zero hardcoded colours outside `globals.css`.
+
+Light / Dark / System is handled by `next-themes` (`src/components/theme-provider.tsx`), toggled
+from the account menu. `/design-system` renders every token and component state for review; it is
+development-only and returns 404 in a production build.
 
 ## How tracking works
 
