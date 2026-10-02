@@ -21,6 +21,8 @@ export const metadata: Metadata = {
     template: "%s · ExtSignal",
   },
   description: "Chrome Web Store search intelligence and rank tracking.",
+  // favicon / apple-icon 由 src/app 下的同名文件自动生成，这里只需声明 manifest。
+  manifest: "/site.webmanifest",
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

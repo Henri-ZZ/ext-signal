@@ -89,8 +89,8 @@ extension is still created — ext-probe backfills metadata on its next collecti
 ## Project structure
 
 ```
-assets/logo.png                # brand source (1254px), not served — 界面与图标用的
-                               #   public/logo.png、src/app/icon.png、apple-icon.png 都由它生成
+assets/logo.png                # brand source (1254px), NOT served — the icons below
+                               #   are downsized from it; see "Brand assets"
 db/schema.sql                  # tables + target_latest view
 src/
   proxy.ts                     # route protection for /dashboard/* (Next 16 proxy)
@@ -120,6 +120,26 @@ scripts/
 
 Pages are Server Components. Client boundaries are limited to what genuinely needs interactivity:
 the sidebar, dialogs, the target form, the chart, the tabs container and the Track now button.
+
+## Brand assets
+
+`assets/logo.png` is the 1254px master and is **never served** — it is not inside `public/`. Everything
+users actually download is downsized and re-compressed from it:
+
+| File                       | Size          | Used for                                      |
+| -------------------------- | ------------- | --------------------------------------------- |
+| `src/app/favicon.ico`      | 16 / 32 / 48  | `/favicon.ico`, requested directly by browsers |
+| `src/app/icon.png`         | 96            | modern browser tab icon                        |
+| `src/app/apple-icon.png`   | 180           | iOS home screen                                |
+| `public/icon-192.png`      | 192           | declared in `public/site.webmanifest`          |
+| `public/icon-512.png`      | 512           | declared in `public/site.webmanifest`          |
+| `public/logo.png`          | 256           | in-app wordmark, served through `next/image`   |
+
+The three files under `src/app/` are picked up automatically by Next's file-based metadata, so the
+`<link>` tags are generated at build time and `layout.tsx` only declares the manifest.
+
+The 16px entry is inherently muddy — the artwork carries far more detail than fits in 16 pixels. A
+crisp tab icon at that size would need a simplified mark, not a downscale.
 
 ## How tracking works
 
