@@ -34,7 +34,7 @@ export async function generateMetadata({
   const user = await getCurrentUser()
   if (!user) return { title: "Extension" }
 
-  const extension = await getExtensionSummary(user.email, id)
+  const extension = await getExtensionSummary(user.id, id)
 
   return {
     title: extension?.name ?? "Extension",
@@ -46,7 +46,7 @@ export default async function ExtensionDetailPage({
 }: ExtensionPageProps) {
   const { id } = await params
   const user = await requireCurrentUser()
-  const extension = await getExtensionSummary(user.email, id)
+  const extension = await getExtensionSummary(user.id, id)
 
   if (!extension) {
     notFound()
@@ -56,7 +56,7 @@ export default async function ExtensionDetailPage({
     getRankingsMatrix(extension.id),
     getExtensionHistory(extension.cwsId, 30),
     getCompetitors(extension.cwsId),
-    getUserPreferences(user.email),
+    getUserPreferences(user.id),
   ])
 
   const showRegion = preferences.localeShowRegion

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default async function SettingsPage() {
   const user = await requireCurrentUser()
-  const preferences = await getUserPreferences(user.email)
+  const preferences = await getUserPreferences(user.id)
 
   return (
     <>

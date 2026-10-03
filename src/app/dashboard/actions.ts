@@ -58,14 +58,14 @@ export async function addExtensionAction(
   const sql = getDb()
 
   const inserted = (await sql`
-    INSERT INTO extensions (id, cws_id, name, owner_email)
-    VALUES (${crypto.randomUUID()}::uuid, ${parsed.value.cwsId}, ${name}, ${user.email})
-    ON CONFLICT (owner_email, cws_id) DO NOTHING
+    INSERT INTO extensions (id, cws_id, name, owner_user_id)
+    VALUES (${crypto.randomUUID()}::uuid, ${parsed.value.cwsId}, ${name}, ${user.id}::uuid)
+    ON CONFLICT (owner_user_id, cws_id) DO NOTHING
     RETURNING id
   `) as { id: string }[]
 
   const extensionId =
-    inserted[0]?.id ?? (await getExtensionIdByCwsId(user.email, parsed.value.cwsId))
+    inserted[0]?.id ?? (await getExtensionIdByCwsId(user.id, parsed.value.cwsId))
 
   if (!extensionId) {
     return { status: "error", message: "Could not add the extension. Try again." }
@@ -116,7 +116,7 @@ export async function addTargetsAction(
   const sql = getDb()
   const owned = (await sql`
     SELECT 1 FROM extensions
-    WHERE id = ${extensionId}::uuid AND owner_email = ${user.email}
+    WHERE id = ${extensionId}::uuid AND owner_user_id = ${user.id}::uuid
   `) as unknown[]
   if (owned.length === 0) {
     return { status: "error", message: "Extension not found." }
@@ -161,9 +161,9 @@ export async function setLocaleRegionAction(
   const sql = getDb()
 
   await sql`
-    INSERT INTO user_preferences (owner_email, locale_show_region)
-    VALUES (${user.email}, ${showRegion})
-    ON CONFLICT (owner_email) DO UPDATE SET
+    INSERT INTO user_preferences (owner_user_id, locale_show_region)
+    VALUES (${user.id}::uuid, ${showRegion})
+    ON CONFLICT (owner_user_id) DO UPDATE SET
       locale_show_region = EXCLUDED.locale_show_region,
       updated_at = now()
   `
@@ -186,7 +186,7 @@ export async function setTargetEnabledAction(formData: FormData): Promise<void> 
     FROM extensions e
     WHERE t.id = ${targetId}::uuid
       AND t.extension_id = e.id
-      AND e.owner_email = ${user.email}
+      AND e.owner_user_id = ${user.id}::uuid
   `
 
   revalidateDashboard()
@@ -204,7 +204,7 @@ export async function deleteTargetAction(formData: FormData): Promise<void> {
     USING extensions e
     WHERE t.id = ${targetId}::uuid
       AND t.extension_id = e.id
-      AND e.owner_email = ${user.email}
+      AND e.owner_user_id = ${user.id}::uuid
   `
 
   revalidateDashboard()
@@ -219,7 +219,7 @@ export async function deleteExtensionAction(formData: FormData): Promise<void> {
   const sql = getDb()
   await sql`
     DELETE FROM extensions
-    WHERE id = ${extensionId}::uuid AND owner_email = ${user.email}
+    WHERE id = ${extensionId}::uuid AND owner_user_id = ${user.id}::uuid
   `
 
   revalidateDashboard()

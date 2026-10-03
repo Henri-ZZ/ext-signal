@@ -13,6 +13,10 @@ import {
  * `ranking_results` and `collection_batches` are written by ext-probe and read
  * only here. `target_latest` (see db/schema.sql) resolves the newest success /
  * failure per tracking target so every query shares one definition.
+ *
+ * Ownership is keyed on the Neon Auth **user id**, never the email: the id is
+ * the primary key of `neon_auth."user"` and cannot change, so changing the
+ * account's email address leaves every row attached to the same workspace.
  */
 
 export type ExtensionSummary = {
@@ -146,7 +150,7 @@ const SUMMARY_COLUMNS = `
 `
 
 export async function listExtensions(
-  ownerEmail: string,
+  ownerUserId: string,
 ): Promise<ExtensionSummary[]> {
   const sql = getDb()
   const rows = (await sql`
@@ -155,7 +159,7 @@ export async function listExtensions(
     LEFT JOIN extension_profiles p ON p.cws_id = e.cws_id
     LEFT JOIN target_latest tl
       ON tl.extension_id = e.id AND tl.enabled = true
-    WHERE e.owner_email = ${ownerEmail}
+    WHERE e.owner_user_id = ${ownerUserId}::uuid
     GROUP BY e.id, p.title, p.icon_url, p.rating, p.rating_count
     ORDER BY e.created_at DESC
   `) as ExtensionRow[]
@@ -164,7 +168,7 @@ export async function listExtensions(
 }
 
 export async function getExtensionSummary(
-  ownerEmail: string,
+  ownerUserId: string,
   extensionId: string,
 ): Promise<ExtensionSummary | null> {
   const sql = getDb()
@@ -174,7 +178,7 @@ export async function getExtensionSummary(
     LEFT JOIN extension_profiles p ON p.cws_id = e.cws_id
     LEFT JOIN target_latest tl
       ON tl.extension_id = e.id AND tl.enabled = true
-    WHERE e.owner_email = ${ownerEmail} AND e.id = ${extensionId}::uuid
+    WHERE e.owner_user_id = ${ownerUserId}::uuid AND e.id = ${extensionId}::uuid
     GROUP BY e.id, p.title, p.icon_url, p.rating, p.rating_count
   `) as ExtensionRow[]
 
@@ -183,13 +187,13 @@ export async function getExtensionSummary(
 }
 
 export async function getExtensionIdByCwsId(
-  ownerEmail: string,
+  ownerUserId: string,
   cwsId: string,
 ): Promise<string | null> {
   const sql = getDb()
   const rows = (await sql`
     SELECT id FROM extensions
-    WHERE owner_email = ${ownerEmail} AND cws_id = ${cwsId}
+    WHERE owner_user_id = ${ownerUserId}::uuid AND cws_id = ${cwsId}
   `) as { id: string }[]
 
   return rows[0]?.id ?? null
@@ -335,7 +339,7 @@ const HISTORY_SELECT = `
 `
 
 export async function getWorkspaceHistory(
-  ownerEmail: string,
+  ownerUserId: string,
   days = 30,
 ): Promise<HistoryPoint[]> {
   const sql = getDb()
@@ -344,7 +348,7 @@ export async function getWorkspaceHistory(
     WHERE rr.status = 'success'
       AND rr.collected_at >= now() - (${days}::int * interval '1 day')
       AND rr.target_extension_id IN (
-        SELECT cws_id FROM extensions WHERE owner_email = ${ownerEmail}
+        SELECT cws_id FROM extensions WHERE owner_user_id = ${ownerUserId}::uuid
       )
     GROUP BY 1
     ORDER BY 1
@@ -434,12 +438,12 @@ type OverviewRow = {
 }
 
 export async function getOverviewStats(
-  ownerEmail: string,
+  ownerUserId: string,
 ): Promise<OverviewStats> {
   const sql = getDb()
   const rows = (await sql`
     SELECT
-      (SELECT COUNT(*)::int FROM extensions WHERE owner_email = ${ownerEmail})
+      (SELECT COUNT(*)::int FROM extensions WHERE owner_user_id = ${ownerUserId}::uuid)
         AS extension_count,
       COUNT(*)::int AS target_count,
       COUNT(DISTINCT tl.locale)::int AS locale_count,
@@ -447,7 +451,7 @@ export async function getOverviewStats(
       COUNT(*) FILTER (WHERE tl.target_rank IS NOT NULL)::int AS ranked_count,
       COUNT(*) FILTER (WHERE tl.collected_at IS NULL)::int AS pending_count
     FROM target_latest tl
-    WHERE tl.owner_email = ${ownerEmail} AND tl.enabled = true
+    WHERE tl.owner_user_id = ${ownerUserId}::uuid AND tl.enabled = true
   `) as OverviewRow[]
 
   const [row] = rows

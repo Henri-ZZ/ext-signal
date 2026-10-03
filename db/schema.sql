@@ -1,4 +1,5 @@
 -- ExtSignal 表结构。与 ext-probe 共用同一个 Neon 数据库，可重复执行。
+-- 这是「从零建库」的最终形态；已有库的增量变更放在 db/migrations/。
 --
 -- 分工：
 --   ext-signal  拥有 extensions / tracking_targets，负责写入「要跟踪什么」。
@@ -16,10 +17,11 @@ CREATE TABLE IF NOT EXISTS extensions (
   id uuid PRIMARY KEY,
   cws_id text NOT NULL,
   name text NOT NULL,
-  -- 预留多租户：接入 Neon Auth 后这里换成 user_id uuid。
-  owner_email text NOT NULL,
+  -- 归属键是 Neon Auth 的 user id（neon_auth."user".id 的主键），不是 email。
+  -- id 永不变，所以账号换邮箱不会丢归属；email 只是展示用的标签。
+  owner_user_id uuid NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT extensions_owner_cws_unique UNIQUE (owner_email, cws_id)
+  CONSTRAINT extensions_owner_user_id_cws_unique UNIQUE (owner_user_id, cws_id)
 );
 
 -- 一个 keyword x locale 组合即一个 tracking target，是产品的核心数据单元。
@@ -35,9 +37,9 @@ CREATE TABLE IF NOT EXISTS tracking_targets (
   CONSTRAINT tracking_targets_locale_not_blank CHECK (btrim(locale) <> '')
 );
 
--- 用户级显示偏好。接入 Neon Auth 后 owner_email 换成 user_id。
+-- 用户级显示偏好。
 CREATE TABLE IF NOT EXISTS user_preferences (
-  owner_email text PRIMARY KEY,
+  owner_user_id uuid PRIMARY KEY,
   -- 是否在 locale 代码前显示国家，例如 China (zh-CN)。
   locale_show_region boolean NOT NULL DEFAULT false,
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -50,8 +52,8 @@ CREATE INDEX IF NOT EXISTS tracking_targets_due_idx
 CREATE INDEX IF NOT EXISTS tracking_targets_extension_idx
   ON tracking_targets (extension_id);
 
-CREATE INDEX IF NOT EXISTS extensions_owner_created_idx
-  ON extensions (owner_email, created_at DESC);
+CREATE INDEX IF NOT EXISTS extensions_owner_user_created_idx
+  ON extensions (owner_user_id, created_at DESC);
 
 -- 「每个 target 的当前状态」只在这里定义一次。
 -- ok   = 最近一次成功采集，target_rank 为数字即已排名，为 NULL 即 NR
@@ -64,7 +66,7 @@ SELECT
   t.id AS target_id,
   t.extension_id,
   e.cws_id,
-  e.owner_email,
+  e.owner_user_id,
   t.keyword,
   t.locale,
   t.enabled,

@@ -203,9 +203,11 @@ How it fits together:
 - `src/lib/session.ts` is the single seam the app consumes: `requireCurrentUser()` for anything that needs
   a user, `getCurrentUser()` when `null` is meaningful.
 
-Ownership is keyed on email (`extensions.owner_email`, `tracking_targets`, `user_preferences`), so a
-signed-in account only ever sees its own rows. The existing data belongs to `henri@henriz.dev` — sign in
-with that Google account to see it; signing in with any other address yields an empty workspace.
+Ownership is keyed on the Neon Auth **user id** (`extensions.owner_user_id`,
+`user_preferences.owner_user_id`), so a signed-in account only ever sees its own rows. The id is the
+primary key of `neon_auth."user"` and never changes, which is what makes changing the account's email
+address a non-event — every row stays attached to the same workspace. `tracking_targets` carries no owner
+of its own: it follows `extensions` through `extension_id`, so there is only one place to get this right.
 
 ## Deployment
 

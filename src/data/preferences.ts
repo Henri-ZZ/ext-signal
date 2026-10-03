@@ -16,13 +16,13 @@ type PreferenceRow = {
 }
 
 export async function getUserPreferences(
-  ownerEmail: string,
+  ownerUserId: string,
 ): Promise<UserPreferences> {
   const sql = getDb()
   const rows = (await sql`
     SELECT locale_show_region
     FROM user_preferences
-    WHERE owner_email = ${ownerEmail}
+    WHERE owner_user_id = ${ownerUserId}::uuid
   `) as PreferenceRow[]
 
   const [row] = rows

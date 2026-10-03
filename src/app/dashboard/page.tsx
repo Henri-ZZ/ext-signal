@@ -47,9 +47,9 @@ function collectionSummary(
 export default async function DashboardOverviewPage() {
   const user = await requireCurrentUser()
   const [stats, extensions, history, collection] = await Promise.all([
-    getOverviewStats(user.email),
-    listExtensions(user.email),
-    getWorkspaceHistory(user.email, 30),
+    getOverviewStats(user.id),
+    listExtensions(user.id),
+    getWorkspaceHistory(user.id, 30),
     getLatestCollection(),
   ])
 
