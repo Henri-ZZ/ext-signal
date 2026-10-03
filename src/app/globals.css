@@ -70,10 +70,17 @@
   --color-info-foreground: var(--info-foreground);
   --color-info-soft: var(--info-soft);
 
-  /* Ranking language: one restrained scale for the keyword x locale matrix */
-  --color-ranking-top: var(--ranking-top);
+  /* Ranking language: green / grey / yellow / red for the keyword x locale
+     matrix. Four hues, each a distinct band — hue carries the meaning, so
+     there are no second shades inside a band. */
   --color-ranking-top10: var(--ranking-top10);
-  --color-ranking-highlight: var(--ranking-highlight);
+  --color-ranking-top10-soft: var(--ranking-top10-soft);
+  --color-ranking-top30: var(--ranking-top30);
+  --color-ranking-top30-soft: var(--ranking-top30-soft);
+  --color-ranking-top50: var(--ranking-top50);
+  --color-ranking-top50-soft: var(--ranking-top50-soft);
+  --color-ranking-over50: var(--ranking-over50);
+  --color-ranking-over50-soft: var(--ranking-over50-soft);
   --color-ranking-positive: var(--ranking-positive);
   --color-ranking-negative: var(--ranking-negative);
 
@@ -138,10 +145,15 @@
   --info-foreground: oklch(1 0 0); /* #FFFFFF */
   --info-soft: oklch(0.9705 0.0142 254.6); /* #EFF6FF */
 
-  /* Ranking */
-  --ranking-top: oklch(0.596 0.1274 163.23); /* #059669 */
-  --ranking-top10: oklch(0.6959 0.1491 162.48); /* #10B981 */
-  --ranking-highlight: oklch(0.9827 0.0158 166.74); /* #F0FDF7 */
+  /* Ranking — green 1-10 / grey 11-30 / yellow 31-50 / red >50 */
+  --ranking-top10: oklch(0.4708 0.0991 164.22); /* #036C4C */
+  --ranking-top10-soft: oklch(0.892 0.0807 165.8); /* #A8EDCF */
+  --ranking-top30: oklch(0.4337 0.0172 168.5); /* #48544F */
+  --ranking-top30-soft: oklch(0.9289 0.0069 174.37); /* #E3E9E7 */
+  --ranking-top50: oklch(0.4828 0.101 73.57); /* #805404 */
+  --ranking-top50-soft: oklch(0.9022 0.1046 89.65); /* #FADC8C */
+  --ranking-over50: oklch(0.4732 0.1749 27.17); /* #A81C1C */
+  --ranking-over50-soft: oklch(0.8527 0.0658 18.53); /* #F7BEBE */
   --ranking-positive: oklch(0.596 0.1274 163.23); /* #059669 */
   --ranking-negative: oklch(0.5771 0.2152 27.33); /* #DC2626 */
 
@@ -208,10 +220,15 @@
   --info-foreground: oklch(0.2204 0.0459 254.99); /* #0C1D2E */
   --info-soft: oklch(0.2578 0.0541 254.99); /* #10243D */
 
-  /* Ranking */
-  --ranking-top: oklch(0.7729 0.1535 163.22); /* #34D399 */
-  --ranking-top10: oklch(0.8452 0.1299 164.98); /* #6EE7B7 */
-  --ranking-highlight: oklch(0.2646 0.0375 169.19); /* #102B22 */
+  /* Ranking — green 1-10 / grey 11-30 / yellow 31-50 / red >50 */
+  --ranking-top10: oklch(0.9109 0.0887 165.87); /* #A8F5D4 */
+  --ranking-top10-soft: oklch(0.446 0.0801 165.05); /* #1D6249 */
+  --ranking-top30: oklch(0.8415 0.0138 167.11); /* #C3CEC9 */
+  --ranking-top30-soft: oklch(0.3304 0.0144 175.32); /* #2E3835 */
+  --ranking-top50: oklch(0.8676 0.1188 89.76); /* #F2D073 */
+  --ranking-top50-soft: oklch(0.3693 0.0626 86.51); /* #4E3D13 */
+  --ranking-over50: oklch(0.7926 0.0942 19.37); /* #F2A3A3 */
+  --ranking-over50-soft: oklch(0.307 0.067 21.77); /* #4C2020 */
   --ranking-positive: oklch(0.7729 0.1535 163.22); /* #34D399 */
   --ranking-negative: oklch(0.7106 0.1661 22.22); /* #F87171 */
 

@@ -1,7 +1,5 @@
 import {
   cellDescription,
-  cellLabel,
-  cellStyle,
   RANK_TIER_META,
   RANK_TIER_ORDER,
 } from "@/lib/rankings"
@@ -13,6 +11,7 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/dashboard/data-table"
+import { RankTag, RankTagUntracked } from "@/components/dashboard/rank-tag"
 import {
   Tooltip,
   TooltipContent,
@@ -46,22 +45,12 @@ function buildColumns(
       align: "right",
       cell: (row) => {
         const cell = row.cells[locale]
-        if (!cell) {
-          return <span className="text-muted-foreground/30">·</span>
-        }
+        if (!cell) return <RankTagUntracked />
 
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span
-                className={cn(
-                  "inline-flex h-6 min-w-10 items-center justify-center rounded-md px-1.5 font-mono text-xs tabular-nums",
-                  cellStyle(cell),
-                  !cell.enabled && "opacity-50",
-                )}
-              >
-                {cellLabel(cell)}
-              </span>
+              <RankTag cell={cell} muted={!cell.enabled} />
             </TooltipTrigger>
             <TooltipContent>{cellDescription(cell)}</TooltipContent>
           </Tooltip>
@@ -84,12 +73,16 @@ function RankTierLegend() {
         </span>
       ))}
       <span className="flex items-center gap-1.5">
-        <span className="size-2.5 rounded-[3px] bg-warning/60" />
+        <span className="size-2.5 rounded-[3px] ring-1 ring-inset ring-warning" />
         Failed
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="size-2.5 rounded-[3px] bg-transparent ring-1 ring-inset ring-border" />
+        <span className="h-[3px] w-3 rounded-full bg-muted-foreground/45" />
         Not collected
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-[2px] w-2.5 rounded-full bg-border" />
+        Not tracked
       </span>
     </div>
   )

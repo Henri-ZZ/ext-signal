@@ -8,17 +8,15 @@ import {
   DataTable,
   type DataTableColumn,
 } from "@/components/dashboard/data-table"
+import { RankTag } from "@/components/dashboard/rank-tag"
 import { Button } from "@/components/ui/button"
 import type { MatrixCell, RankingsMatrix } from "@/data/extensions"
 import { formatLocaleLabel } from "@/lib/locales"
 import {
   cellDescription,
-  cellLabel,
-  cellStyle,
   formatRelativeTime,
   formatRelativeTimeFromNow,
 } from "@/lib/rankings"
-import { cn } from "@/lib/utils"
 
 type TargetEntry = {
   targetId: string
@@ -67,15 +65,7 @@ function buildColumns(showRegion: boolean): DataTableColumn<TargetEntry>[] {
     header: "Status",
     cell: (entry) => (
       <span className="flex items-center gap-2">
-        <span
-          className={cn(
-            "inline-flex h-6 min-w-10 items-center justify-center rounded-md px-1.5 font-mono text-xs tabular-nums",
-            cellStyle(entry.cell),
-          )}
-          title={cellDescription(entry.cell)}
-        >
-          {cellLabel(entry.cell)}
-        </span>
+        <RankTag cell={entry.cell} title={cellDescription(entry.cell)} />
         {!entry.cell.enabled ? (
           <span className="text-xs text-muted-foreground">paused</span>
         ) : null}

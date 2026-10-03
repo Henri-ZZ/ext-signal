@@ -111,7 +111,8 @@ Status     destructive  destructive-foreground
            success  success-foreground  success-soft
            warning  warning-foreground  warning-soft
            info  info-foreground  info-soft
-Ranking    ranking-top  ranking-top10  ranking-highlight
+Ranking    ranking-top10  ranking-top30  ranking-top50  ranking-over50
+           (each with a matching `-soft` background token)
            ranking-positive  ranking-negative
 Charts     chart-1 .. chart-5   (raw CSS vars: var(--chart-N))
 Sidebar    sidebar  sidebar-foreground  sidebar-primary  sidebar-primary-foreground
@@ -180,33 +181,62 @@ it was moved deliberately, so don't add it back to the footer.
 - Identifiers, locale codes and ranks use `font-mono`.
 - Selected rows use `bg-muted`.
 
-The keyword × locale matrix is the most important table in the product. It must stay readable at
-a glance **without turning into a green checkerboard** — see the next section.
+The keyword × locale matrix is the most important table in the product, and it is the one place
+where colour is allowed to fill the grid. It reads as a heat map: soft tints that let you find the
+green without reading a single number. The tints stay in the pastel range on purpose — a saturated
+fill on every cell would make the matrix louder than the data — see the next section.
 
 ---
 
 ## 9. Ranking colours
 
-The matrix cell language, in `src/lib/rankings.ts`:
+The matrix cell language. Defined in `src/lib/rankings.ts`, rendered by
+`src/components/dashboard/rank-tag.tsx` — the matrix and the targets table share that component, so
+the language can only diverge in one place.
 
-| State                | Light     | Dark      | Treatment                             |
-| -------------------- | --------- | --------- | ------------------------------------- |
-| Top 3                | `#059669` | `#34D399` | `bg-ranking-highlight` fill + semibold |
-| Top 10               | `#10B981` | `#6EE7B7` | green text, medium weight, **no fill** |
-| 11–30                | —         | —         | `text-foreground`                     |
-| 31–50 / NR           | —         | —         | `text-muted-foreground`               |
-| Collection failed    | `#D97706` | `#FBBF24` | `bg-warning-soft` + `text-warning`    |
-| Not collected        | —         | —         | `text-muted-foreground/60`            |
+| Band  | Light fg / bg         | Dark fg / bg          |
+| ----- | --------------------- | --------------------- |
+| 1–10  | `#036C4C` / `#A8EDCF` | `#A8F5D4` / `#1D6249` |
+| 11–30 | `#48544F` / `#E3E9E7` | `#C3CEC9` / `#2E3835` |
+| 31–50 | `#805404` / `#FADC8C` | `#F2D073` / `#4E3D13` |
+| >50   | `#A81C1C` / `#F7BEBE` | `#F2A3A3` / `#4C2020` |
+
+All eight pairs pass WCAG AA (≥ 4.5:1). None of them is a saturated fill.
+
+The band boundaries follow the store's own pagination, which is what makes them mean something:
+1–10 is page one, 11–30 is pages two and three, 31–50 is pages four and five, and past that the
+listing is effectively invisible.
+
+**Grey carries the widest range on purpose.** 11–30 is the "indexed but not winning" band and it is
+the most common one in a real matrix. Painting it grey keeps those cells quiet so the green ones
+find the eye on their own. An earlier iteration tinted every band green → orange → red and produced
+a traffic-light grid where no single cell stood out.
+
+**Hue carries the meaning, and there are no sub-shades inside a band.** An earlier proposal split
+each hue into three shades (1–3 / 4–7 / 8–10 and so on). Rendering those side by side showed that
+adjacent tints of one hue are not reliably distinguishable at cell size — the extra bands added
+visual noise and no information. If you want more granularity, add a new **hue**, not a new shade.
+
+### Cells with no rank
+
+| State                     | Treatment                                                       |
+| ------------------------- | --------------------------------------------------------------- |
+| Ranked beyond the range   | The `>50` band; the label reads `>{checkedWithin}`               |
+| Collection failed         | **Outlined**, not filled: `ring-warning` + `text-warning` + `!`  |
+| Not collected yet         | A 16×3 px `bg-muted-foreground/45` bar                           |
+| No tracking target at all | A 12×2 px `bg-border` bar                                        |
+
+The two "no data" states are drawn as an **element, not a glyph**. A `·` or an em dash at low
+opacity disappears at cell size; a bar has a predictable length and weight in any font.
+
+Failure is outlined rather than filled on purpose: a failure is a *missing* conclusion, and a filled
+cell would read as just another rank band. `>50` is a conclusion, `!` is not — keep them distinct.
+
+The label is `>{checkedWithin}` rather than a hardcoded `>50`, so it stays truthful if the probe
+ever collects a deeper range.
 
 Movement: `text-ranking-positive` (`↑ +6`), `text-ranking-negative` (`↓ −3`), `text-info` (NEW).
-
-**Only Top 3 gets a fill.** The brief allowed a very light green on Top 10 cells too, but a real
-matrix has a top-10 ranking in most cells — that produces exactly the checkerboard the brief warns
-against. Top 10 is identified by green text alone. If you are tempted to add a fill, look at the
-matrix with 20 keywords first.
-
-`NR` and `!` are different states and must stay visually distinct: `NR` is a conclusion, `!` is a
-missing conclusion.
+Not rendered anywhere yet — no product surface compares two snapshots.
 
 ---
 

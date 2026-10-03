@@ -38,14 +38,13 @@ export const PENDING_CELL: RankCell = {
   retryAfter: null,
 }
 
-export type RankTier = "top3" | "top10" | "top20" | "top50" | "unranked"
+export type RankTier = "top10" | "top30" | "top50" | "over50"
 
 export const RANK_TIER_ORDER: RankTier[] = [
-  "top3",
   "top10",
-  "top20",
+  "top30",
   "top50",
-  "unranked",
+  "over50",
 ]
 
 type RankTierMeta = {
@@ -54,66 +53,79 @@ type RankTierMeta = {
   swatch: string
 }
 
+/**
+ * Four bands, one hue each: green → grey → yellow → red.
+ *
+ * Grey is the "nothing to see here" band and covers the widest range (11–30).
+ * That is the point: colouring only the bands that need attention keeps the
+ * matrix quiet, so the green cells find the eye on their own instead of every
+ * cell competing for it.
+ *
+ * There is deliberately no second shade inside a band. Adjacent tints of one
+ * hue are not reliably distinguishable at cell size — verified by rendering
+ * them side by side — so extra shades would add noise, not signal.
+ *
+ * Boundaries follow the store's own pagination: 1–10 is page one, 11–30 is
+ * pages two and three, 31–50 is pages four and five, beyond that the listing is
+ * effectively invisible.
+ */
 export const RANK_TIER_META: Record<RankTier, RankTierMeta> = {
-  // Only Top 3 gets a fill: a matrix where every Top 10 cell is tinted turns
-  // into a green checkerboard, which the design system explicitly rules out.
-  top3: {
-    label: "Top 3",
-    cell: "bg-ranking-highlight font-semibold text-ranking-top",
-    swatch: "bg-ranking-top",
-  },
   top10: {
-    label: "Top 10",
-    cell: "font-medium text-ranking-top10",
-    swatch: "bg-ranking-top10",
+    label: "1–10",
+    cell: "bg-ranking-top10-soft text-ranking-top10",
+    swatch: "bg-ranking-top10-soft ring-1 ring-inset ring-ranking-top10/30",
   },
-  top20: {
-    label: "Top 20",
-    cell: "text-foreground",
-    swatch: "bg-foreground/20",
+  top30: {
+    label: "11–30",
+    cell: "bg-ranking-top30-soft text-ranking-top30",
+    swatch: "bg-ranking-top30-soft ring-1 ring-inset ring-ranking-top30/30",
   },
   top50: {
-    label: "Top 50",
-    cell: "text-muted-foreground",
-    swatch: "bg-foreground/10",
+    label: "31–50",
+    cell: "bg-ranking-top50-soft text-ranking-top50",
+    swatch: "bg-ranking-top50-soft ring-1 ring-inset ring-ranking-top50/30",
   },
-  unranked: {
-    label: "NR",
-    cell: "text-muted-foreground",
-    swatch: "bg-transparent ring-1 ring-inset ring-border",
+  over50: {
+    label: ">50",
+    cell: "bg-ranking-over50-soft text-ranking-over50",
+    swatch: "bg-ranking-over50-soft ring-1 ring-inset ring-ranking-over50/30",
   },
 }
 
 export function rankTier(rank: number | null | undefined): RankTier {
-  if (rank == null) return "unranked"
-  if (rank <= 3) return "top3"
+  if (rank == null) return "over50"
   if (rank <= 10) return "top10"
-  if (rank <= 20) return "top20"
+  if (rank <= 30) return "top30"
   if (rank <= 50) return "top50"
-  return "unranked"
+  return "over50"
 }
 
 export function isRanked(rank: number | null | undefined): rank is number {
   return rank != null
 }
 
-/** Cell classes for the keyword x locale matrix. */
+/** Cell classes for the keyword x locale matrix. Empty for the pending state,
+ *  which `RankTag` renders as a bar instead of a tinted pill. */
 export function cellStyle(cell: RankCell): string {
   if (cell.state === "ranked" && cell.rank != null) {
     return RANK_TIER_META[rankTier(cell.rank)].cell
   }
   if (cell.state === "not-found") {
-    return "text-muted-foreground"
+    return RANK_TIER_META.over50.cell
   }
   if (cell.state === "failed") {
-    return "bg-warning-soft text-warning"
+    // Outlined rather than filled: a failure is a *missing* conclusion, so it
+    // has to stay distinguishable from every band of the rank scale itself.
+    return "bg-background text-warning ring-1 ring-inset ring-warning/45"
   }
-  return "text-muted-foreground/60"
+  return ""
 }
 
 export function cellLabel(cell: RankCell): string {
   if (cell.state === "ranked" && cell.rank != null) return `#${cell.rank}`
-  if (cell.state === "not-found") return "NR"
+  // Renders as `>50` today. Driven by the collected depth rather than a
+  // hardcoded 50, so it stays truthful if the probe ever looks deeper.
+  if (cell.state === "not-found") return `>${cell.checkedWithin ?? 50}`
   if (cell.state === "failed") return "!"
   return "—"
 }

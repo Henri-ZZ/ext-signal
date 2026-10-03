@@ -25,9 +25,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
+import { RankTag, RankTagUntracked } from "@/components/dashboard/rank-tag"
 import {
-  cellLabel,
-  cellStyle,
   PENDING_CELL,
   RANK_TIER_META,
   RANK_TIER_ORDER,
@@ -102,11 +101,10 @@ const FAILED: RankCell = {
 }
 
 const RANK_STATES: { cell: RankCell; label: string }[] = [
-  { cell: RANKED(2), label: "Top 3" },
-  { cell: RANKED(7), label: "Top 10" },
-  { cell: RANKED(18), label: "Top 20" },
-  { cell: RANKED(44), label: "Top 50" },
-  { cell: NOT_FOUND, label: "NR" },
+  { cell: RANKED(3), label: "green · 1–10" },
+  { cell: RANKED(22), label: "grey · 11–30" },
+  { cell: RANKED(42), label: "yellow · 31–50" },
+  { cell: NOT_FOUND, label: "red · >50" },
   { cell: FAILED, label: "Collection failed" },
   { cell: PENDING_CELL, label: "Not collected" },
 ]
@@ -196,52 +194,31 @@ export default function DesignSystemPage() {
 
       <Section
         title="Ranking language"
-        description="One restrained scale. Only Top 3 gets a fill — tinting every Top 10 cell turns the matrix into a checkerboard."
+        description="Four bands — green, grey, yellow, red. Grey covers 11–30 so that only the bands needing attention carry colour. Hue carries the meaning; no band is subdivided into shades."
       >
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
             {RANK_STATES.map(({ cell, label }) => (
               <span key={label} className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    "inline-flex h-6 min-w-10 items-center justify-center rounded-md px-1.5 font-mono text-xs tabular-nums",
-                    cellStyle(cell),
-                  )}
-                >
-                  {cellLabel(cell)}
-                </span>
+                <RankTag cell={cell} />
                 <span className="text-xs text-muted-foreground">{label}</span>
               </span>
             ))}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-            {RANK_TIER_ORDER.map((tier) => (
-              <span key={tier} className="flex items-center gap-1.5">
-                <span
-                  className={cn("size-2.5 rounded-[3px]", RANK_TIER_META[tier].swatch)}
-                />
-                {RANK_TIER_META[tier].label}
-              </span>
-            ))}
+            <span className="flex items-center gap-2">
+              <RankTagUntracked />
+              <span className="text-xs text-muted-foreground">No target</span>
+            </span>
           </div>
 
           <SwatchGrid>
-            <Swatch
-              token="bg-ranking-highlight"
-              className="bg-ranking-highlight"
-              note="Top 3 cell fill"
-            />
-            <Swatch
-              token="text-ranking-top"
-              className="flex items-center justify-center bg-card font-mono text-ranking-top"
-              note="Top 3"
-            />
-            <Swatch
-              token="text-ranking-top10"
-              className="flex items-center justify-center bg-card font-mono text-ranking-top10"
-              note="Top 10"
-            />
+            {RANK_TIER_ORDER.map((tier) => (
+              <Swatch
+                key={tier}
+                token={`ranking-${tier}`}
+                className={RANK_TIER_META[tier].swatch}
+                note={RANK_TIER_META[tier].label}
+              />
+            ))}
             <Swatch
               token="text-ranking-positive"
               className="flex items-center justify-center bg-card font-mono text-ranking-positive"
@@ -394,14 +371,7 @@ export default function DesignSystemPage() {
                   <TableCell>{row.keyword}</TableCell>
                   {row.cells.map((cell, index) => (
                     <TableCell key={index} className="text-right">
-                      <span
-                        className={cn(
-                          "inline-flex h-6 min-w-10 items-center justify-center rounded-md px-1.5 font-mono text-xs tabular-nums",
-                          cellStyle(cell),
-                        )}
-                      >
-                        {cellLabel(cell)}
-                      </span>
+                      <RankTag cell={cell} />
                     </TableCell>
                   ))}
                 </TableRow>
