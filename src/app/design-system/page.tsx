@@ -92,6 +92,11 @@ function SwatchGrid({ children }: { children: React.ReactNode }) {
 }
 
 const RANKED = (rank: number): RankCell => ({ ...PENDING_CELL, state: "ranked", rank })
+const NOT_FOUND_SHALLOW: RankCell = {
+  ...PENDING_CELL,
+  state: "not-found",
+  checkedWithin: 10,
+}
 const NOT_FOUND: RankCell = { ...PENDING_CELL, state: "not-found", checkedWithin: 50 }
 const FAILED: RankCell = {
   ...PENDING_CELL,
@@ -104,6 +109,7 @@ const RANK_STATES: { cell: RankCell; label: string }[] = [
   { cell: RANKED(3), label: "green · 1–10" },
   { cell: RANKED(22), label: "grey · 11–30" },
   { cell: RANKED(42), label: "yellow · 31–50" },
+  { cell: NOT_FOUND_SHALLOW, label: "grey · not in top 10" },
   { cell: NOT_FOUND, label: "red · >50" },
   { cell: FAILED, label: "Collection failed" },
   { cell: PENDING_CELL, label: "Not collected" },

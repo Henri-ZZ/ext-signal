@@ -219,12 +219,18 @@ visual noise and no information. If you want more granularity, add a new **hue**
 
 ### Cells with no rank
 
-| State                     | Treatment                                                       |
-| ------------------------- | --------------------------------------------------------------- |
-| Ranked beyond the range   | The `>50` band; the label reads `>{checkedWithin}`               |
-| Collection failed         | **Outlined**, not filled: `ring-warning` + `text-warning` + `!`  |
-| Not collected yet         | A 16×3 px `bg-muted-foreground/45` bar                           |
-| No tracking target at all | A 12×2 px `bg-border` bar                                        |
+| State                      | Treatment                                                          |
+| -------------------------- | ------------------------------------------------------------------ |
+| Not found within the check | The band of `checkedWithin + 1`; the label reads `>{checkedWithin}` |
+| Collection failed          | **Outlined**, not filled: `ring-warning` + `text-warning` + `!`     |
+| Not collected yet          | A 16×3 px `bg-muted-foreground/45` bar                             |
+| No tracking target at all  | A 12×2 px `bg-border` bar                                          |
+
+"Not found within N" is an open-ended lower bound, not a rank: all it proves is that the position is
+worse than N — it says nothing about *how much* worse. So the cell takes the band N itself falls into:
+`>10` is grey, `>30` yellow, `>50` red, and the label and the colour always agree. Painting every one
+of them red would turn "we only checked the first ten" into "it is worse than 50th", which is a
+conclusion the collection never reached.
 
 The two "no data" states are drawn as an **element, not a glyph**. A `·` or an em dash at low
 opacity disappears at cell size; a bar has a predictable length and weight in any font.

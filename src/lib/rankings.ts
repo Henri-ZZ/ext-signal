@@ -111,7 +111,10 @@ export function cellStyle(cell: RankCell): string {
     return RANK_TIER_META[rankTier(cell.rank)].cell
   }
   if (cell.state === "not-found") {
-    return RANK_TIER_META.over50.cell
+    // 「查到第 N 名仍未出现」只证明了名次 > N，证明不了名次 > 50。所以按 N 落在
+    // 哪一档着色，让标签与颜色永远说同一件事：>10 灰、>30 黄、>50 红。
+    // 一律涂红会把「只查了 10 条」说成「比 50 名还差」，这是在替数据下它没下过的结论。
+    return RANK_TIER_META[rankTier((cell.checkedWithin ?? 50) + 1)].cell
   }
   if (cell.state === "failed") {
     // Outlined rather than filled: a failure is a *missing* conclusion, so it
@@ -123,8 +126,7 @@ export function cellStyle(cell: RankCell): string {
 
 export function cellLabel(cell: RankCell): string {
   if (cell.state === "ranked" && cell.rank != null) return `#${cell.rank}`
-  // Renders as `>50` today. Driven by the collected depth rather than a
-  // hardcoded 50, so it stays truthful if the probe ever looks deeper.
+  // 由实际采集深度驱动，而不是写死 50，所以探针查得更深时这里自然会跟着变。
   if (cell.state === "not-found") return `>${cell.checkedWithin ?? 50}`
   if (cell.state === "failed") return "!"
   return "—"
